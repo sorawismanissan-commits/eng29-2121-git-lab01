@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 02: BJT DC Bias Web App</title>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-body: #edf2f7;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #1a202c;
+            --text-muted: #64748b;
+            --blue-header-bg: #e0f2fe;
+            --blue-header-text: #0284c7;
+            --btn-bg: #008ba3;
+            --btn-hover: #007387;
+            --badge-green-bg: #dcfce7;
+            --badge-green-text: #15803d;
+            --badge-green-border: #86efac;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            padding: 2rem 1rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* 📦 Main Outer Frame */
+        .app-wrapper {
+            max-width: 1080px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 1.75rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            border: 1px solid var(--border-color);
+        }
+
+        /* 💡 Header Area */
+        .main-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .icon-box {
+            background-color: #f0f9ff;
+            color: var(--blue-header-text);
+            font-size: 1.8rem;
+            width: 3.4rem;
+            height: 3.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            border: 1px solid #bae6fd;
+        }
+
+        .header-left h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .course-badge {
+            background-color: #e0f2fe;
+            border-radius: 8px;
+            padding: 0.5rem 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            color: #0369a1;
+            font-size: 0.78rem;
+        }
+
+        .course-badge i {
+            font-size: 1.4rem;
+        }
+
+        /* ⚡ 3-Column Layout */
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1.15fr 1.1fr 1.05fr;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        @media (max-width: 920px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .card-header {
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.65rem 1rem;
+            background-color: #f8fafc;
+        }
+
+        .card-header h2 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            color: #0f172a;
+        }
+
+        .card-header.blue-tint {
+            background-color: #f0fdfa;
+            border-bottom-color: #ccfbf1;
+        }
+
+        .card-header.green-tint {
+            background-color: #f0fdf4;
+            border-bottom-color: #dcfce7;
+        }
+
+        /* 🛠 Form Inputs Column */
+        .inputs-form {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+        }
+
+        .form-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.55rem;
+        }
+
+        .form-row label {
+            font-size: 0.83rem;
+            color: #334155;
+            font-weight: 500;
+        }
+
+        .form-row label i, .form-row label var {
+            font-style: italic;
+            font-family: Georgia, serif;
+        }
+
+        .form-row label small {
+            color: var(--text-muted);
+            font-style: normal;
+            font-family: inherit;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        /* ขยายขนาดช่อง Input ป้องกันตัวเลขโดนบัง */
+        .input-group input {
+            width: 68px;
+            border: none;
+            padding: 0.3rem 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: right;
+            outline: none;
+            color: #0f172a;
+        }
+
+        .unit-select {
+            font-size: 0.75rem;
+            color: #475569;
+            padding: 0.3rem 0.4rem;
+            border-left: 1px solid #e2e8f0;
+            background: #f8fafc;
+            min-width: 36px;
+            text-align: center;
+            outline: none;
+            border-right: none;
+            border-top: none;
+            border-bottom: none;
+            cursor: pointer;
+        }
+
+        .btn-calculate {
+            background-color: var(--btn-bg);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            width: 100%;
+            padding: 0.65rem;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-top: 0.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: background 0.2s;
+        }
+
+        .btn-calculate:hover {
+            background-color: var(--btn-hover);
+        }
+
+        /* 📡 SVG Circuit Column */
+        .circuit-container {
+            padding: 1.2rem 0.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #ffffff;
+            height: 100%;
+        }
+
+        .bjt-svg {
+            width: 100%;
+            max-width: 320px;
+            height: auto;
+        }
+
+        .svg-label {
+            font-family: inherit;
+            font-size: 10px;
+            fill: #1e293b;
+        }
+
+        .text-anchor-end { text-anchor: end; }
+        .text-anchor-mid { text-anchor: middle; }
+        .font-bold { font-weight: bold; fill: #0f172a; }
+        .font-xs { font-size: 8.5px; fill: #64748b; }
+
+        /* 📊 DC Bias Results Column */
+        .col-results {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .results-table td {
+            padding: 0.4rem 0.5rem;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.85rem;
+        }
+
+        .results-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .results-table td:first-child {
+            font-weight: 600;
+            color: #334155;
+            font-family: Georgia, serif;
+            font-style: italic;
+        }
+
+        .res-val {
+            text-align: right;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        /* 💡 Dynamic Status Card */
+        .badge-status {
+            border-radius: 8px;
+            padding: 0.7rem 0.8rem;
+            margin-top: 0.8rem;
+            border: 1px solid transparent;
+        }
+
+        .badge-success {
+            background-color: var(--badge-green-bg);
+            color: var(--badge-green-text);
+            border-color: var(--badge-green-border);
+        }
+
+        .badge-title {
+            font-weight: 700;
+            font-size: 0.83rem;
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .badge-body {
+            font-size: 0.75rem;
+            padding-left: 1.3rem;
+            opacity: 0.95;
+        }
+
+        /* 🎯 Footer Goal Area */
+        .goal-card {
+            background-color: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 0.85rem 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+        }
+
+        .goal-tag {
+            background-color: #0284c7;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 0.75rem;
+            padding: 0.35rem 0.65rem;
+            border-radius: 6px;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .goal-text {
+            font-size: 0.76rem;
+            color: #0369a1;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-wrapper">
+        <!-- Header -->
+        <header class="main-header">
+            <div class="header-left">
+                <div class="icon-box">
+                    <i class="fa-solid fa-microchip"></i>
+                </div>
+                <div>
+                    <h1>Lab 02: BJT DC Bias Web App</h1>
+                    <p class="subtitle">ENG29 2121 – Common Emitter (Voltage Divider Bias)</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="course-badge">
+                    <i class="fa-solid fa-code"></i>
+                    <div>
+                        <strong>Computer Programming for</strong><br>
+                        Electrical Engineers
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 3 Columns Layout -->
+        <main class="grid-container">
+            
+            <!-- Column 1: Inputs -->
+            <section class="card">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-gear"></i> Input Parameters</h2>
+                </div>
+                <form id="bias-form" class="inputs-form">
+                    <div class="form-row">
+                        <label for="vcc"><i>V</i><sub>CC</sub> <small>(Supply Voltage)</small></label>
+                        <div class="input-group">
+                            <input type="number" id="vcc" step="0.1" value="12.0" required>
+                            <select class="unit-select"><option>V</option></select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="r1"><i>R</i><sub>1</sub> <small>(Upper Divider)</small></label>
+                        <div class="input-group">
+                            <input type="number" id="r1" step="0.1" value="100" required>
+                            <select class="unit-select"><option>kΩ</option></select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="r2"><i>R</i><sub>2</sub> <small>(Lower Divider)</small></label>
+                        <div class="input-group">
+                            <input type="number" id="r2" step="0.1" value="22" required>
+                            <select class="unit-select"><option>kΩ</option></select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="rc"><i>R</i><sub>C</sub> <small>(Collector Resistor)</small></label>
+                        <div class="input-group">
+                            <input type="number" id="rc" step="0.1" value="2.2" required>
+                            <select class="unit-select"><option>kΩ</option></select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="re"><i>R</i><sub>E</sub> <small>(Emitter Resistor)</small></label>
+                        <div class="input-group">
+                            <input type="number" id="re" step="0.1" value="1.0" required>
+                            <select class="unit-select"><option>kΩ</option></select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="beta">β <small>(Current Gain)</small></label>
+                        <div class="input-group">
+                            <input type="number" id="beta" step="1" value="100" required>
+                            <span class="unit-select">-</span>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="vbe"><i>V</i><sub>BE</sub> <small>(Base-Emitter Voltage)</small></label>
+                        <div class="input-group">
+                            <input type="number" id="vbe" step="0.01" value="0.70" required>
+                            <select class="unit-select"><option>V</option></select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-calculate">
+                        <i class="fa-solid fa-calculator"></i> Calculate DC Bias
+                    </button>
+                </form>
+            </section>
+
+            <!-- Column 2: Circuit Diagram -->
+            <section class="card">
+                <div class="card-header blue-tint">
+                    <h2><i class="fa-solid fa-diagram-project"></i> Circuit: Common-Emitter Amplifier</h2>
+                </div>
+                <div class="circuit-container">
+                    <svg viewBox="0 0 250 260" class="bjt-svg" xmlns="http://www.w3.org/2000/svg">
+                        <!-- VCC Line -->
+                        <line x1="120" y1="35" x2="120" y2="60" stroke="#1e293b" stroke-width="1.8"/>
+                        <circle cx="120" cy="35" r="2.5" fill="#1e293b"/>
+                        <text x="120" y="27" class="svg-label font-bold text-anchor-mid" id="svg-vcc-label">VCC = 12 V</text>
+                        
+                        <!-- R1 -->
+                        <path d="M60 35 L60 70 M60 70 L56 73 L64 77 L56 81 L64 85 L56 89 L64 93 L60 96 L60 130" fill="none" stroke="#1e293b" stroke-width="1.8"/>
+                        <text x="36" y="80" class="svg-label font-bold text-anchor-end" id="svg-r1-label">R1</text>
+                        <text x="36" y="92" class="svg-label text-anchor-end" id="svg-r1-val">100 kΩ</text>
+
+                        <!-- RC -->
+                        <path d="M145 35 L145 65 M145 65 L141 68 L149 72 L141 76 L149 80 L141 84 L149 88 L145 91 L145 120" fill="none" stroke="#1e293b" stroke-width="1.8"/>
+                        <text x="165" y="74" class="svg-label font-bold" id="svg-rc-label">RC</text>
+                        <text x="165" y="86" class="svg-label" id="svg-rc-val">2.2 kΩ</text>
+
+                        <!-- Top Line Bridge -->
+                        <line x1="60" y1="35" x2="145" y2="35" stroke="#1e293b" stroke-width="1.8"/>
+
+                        <!-- Base Line -->
+                        <line x1="60" y1="130" x2="115" y2="130" stroke="#1e293b" stroke-width="1.8"/>
+                        <circle cx="60" cy="130" r="2.5" fill="#1e293b"/>
+
+                        <!-- R2 -->
+                        <path d="M60 130 L60 165 M60 165 L56 168 L64 172 L56 176 L64 180 L56 184 L64 188 L60 191 L60 215" fill="none" stroke="#1e293b" stroke-width="1.8"/>
+                        <text x="36" y="176" class="svg-label font-bold text-anchor-end" id="svg-r2-label">R2</text>
+                        <text x="36" y="188" class="svg-label text-anchor-end" id="svg-r2-val">22 kΩ</text>
+
+                        <!-- Left Ground -->
+                        <line x1="50" y1="215" x2="70" y2="215" stroke="#1e293b" stroke-width="1.8"/>
+                        <line x1="55" y1="219" x2="65" y2="219" stroke="#1e293b" stroke-width="1.5"/>
+                        <line x1="58" y1="223" x2="62" y2="223" stroke="#1e293b" stroke-width="1.2"/>
+
+                        <!-- Transistor NPN Symbol -->
+                        <line x1="115" y1="115" x2="115" y2="145" stroke="#1e293b" stroke-width="2.5"/>
+                        <line x1="115" y1="120" x2="130" y2="108" stroke="#1e293b" stroke-width="1.8"/>
+                        <line x1="115" y1="140" x2="130" y2="152" stroke="#1e293b" stroke-width="1.8"/>
+                        <polygon points="122,142 128,150 120,148" fill="#1e293b"/>
+
+                        <circle cx="123" cy="130" r="15" fill="none" stroke="#1e293b" stroke-width="1.5"/>
+                        
+                        <!-- ขยับตำแหน่งข้อความ Q1 ไม่ให้ซ้อนกับตัวทรานซิสเตอร์ -->
+                        <text x="146" y="125" class="svg-label font-bold" id="svg-q-label">Q1</text>
+                        <text x="146" y="136" class="svg-label font-xs">NPN</text>
+                        <text x="146" y="147" class="svg-label font-xs" id="svg-beta-val">(β = 100)</text>
+
+                        <line x1="145" y1="120" x2="130" y2="108" stroke="#1e293b" stroke-width="1.5"/>
+                        <line x1="145" y1="140" x2="130" y2="152" stroke="#1e293b" stroke-width="1.5"/>
+
+                        <!-- RE -->
+                        <path d="M145 140 L145 165 M145 165 L141 168 L149 172 L141 176 L149 180 L141 184 L149 188 L145 191 L145 215" fill="none" stroke="#1e293b" stroke-width="1.8"/>
+                        <text x="165" y="176" class="svg-label font-bold" id="svg-re-label">RE</text>
+                        <text x="165" y="188" class="svg-label" id="svg-re-val">1.0 kΩ</text>
+
+                        <!-- Right Ground -->
+                        <line x1="135" y1="215" x2="155" y2="215" stroke="#1e293b" stroke-width="1.8"/>
+                        <line x1="140" y1="219" x2="150" y2="219" stroke="#1e293b" stroke-width="1.5"/>
+                        <line x1="143" y1="223" x2="147" y2="223" stroke="#1e293b" stroke-width="1.2"/>
+                    </svg>
+                </div>
+            </section>
+
+            <!-- Column 3: Results -->
+            <section class="card col-results">
+                <div>
+                    <div class="card-header green-tint">
+                        <h2><i class="fa-solid fa-chart-simple"></i> DC Bias Results</h2>
+                    </div>
+                    
+                    <table class="results-table">
+                        <tbody>
+                            <tr>
+                                <td>V<sub>B</sub></td>
+                                <td class="res-val" id="res-vb">2.20 V</td>
+                            </tr>
+                            <tr>
+                                <td>V<sub>E</sub></td>
+                                <td class="res-val" id="res-ve">1.50 V</td>
+                            </tr>
+                            <tr>
+                                <td>V<sub>C</sub></td>
+                                <td class="res-val" id="res-vc">8.70 V</td>
+                            </tr>
+                            <tr>
+                                <td>V<sub>CE</sub></td>
+                                <td class="res-val" id="res-vce">7.20 V</td>
+                            </tr>
+                            <tr>
+                                <td>I<sub>B</sub></td>
+                                <td class="res-val" id="res-ib">15.1 µA</td>
+                            </tr>
+                            <tr>
+                                <td>I<sub>C</sub></td>
+                                <td class="res-val" id="res-ic">1.50 mA</td>
+                            </tr>
+                            <tr>
+                                <td>I<sub>E</sub></td>
+                                <td class="res-val" id="res-ie">1.51 mA</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Status Badge -->
+                <div class="badge-status badge-success" id="status-card">
+                    <div class="badge-title">
+                        <i class="fa-solid fa-circle-check"></i> 
+                        <span>Active region approximation OK</span>
+                    </div>
+                    <div class="badge-body" id="badge-desc-text">
+                        V<sub>CE</sub> = 7.20 V > 0.2 V (transistor in active region)
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="goal-card">
+            <div class="goal-tag">
+                <i class="fa-solid fa-compass"></i> Week 2 Goal
+            </div>
+            <div class="goal-text">
+                <strong>Rough target for this lab:</strong> Build a Flask web app that takes the circuit parameters, computes the BJT DC bias (V<sub>B</sub>, V<sub>E</sub>, V<sub>C</sub>, V<sub>CE</sub>, I<sub>B</sub>, I<sub>C</sub>, I<sub>E</sub>) for a common-emitter amplifier with voltage-divider bias, and displays the results.
+            </div>
+        </footer>
+    </div>
+
+    <!-- Script สำหรับคำนวณและอัปเดต UI -->
+    <script>
+        document.getElementById('bias-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const vcc = parseFloat(document.getElementById('vcc').value);
+            const r1 = parseFloat(document.getElementById('r1').value);
+            const r2 = parseFloat(document.getElementById('r2').value);
+            const rc = parseFloat(document.getElementById('rc').value);
+            const re = parseFloat(document.getElementById('re').value);
+            const beta = parseFloat(document.getElementById('beta').value);
+            const vbe = parseFloat(document.getElementById('vbe').value);
+
+            // คำนวณ DC Bias
+            const r1_ohm = r1 * 1000;
+            const r2_ohm = r2 * 1000;
+            const rc_ohm = rc * 1000;
+            const re_ohm = re * 1000;
+
+            const rth = (r1_ohm * r2_ohm) / (r1_ohm + r2_ohm);
+            const vth = vcc * (r2_ohm / (r1_ohm + r2_ohm));
+
+            const ib = (vth - vbe) / (rth + (1 + beta) * re_ohm);
+            const ic = beta * ib;
+            const ie = (1 + beta) * ib;
+
+            const vb = vth - (ib * rth);
+            const ve = ie * re_ohm;
+            const vc = vcc - (ic * rc_ohm);
+            const vce = vc - ve;
+
+            // อัปเดตตารางผลลัพธ์
+            document.getElementById('res-vb').innerText = `${vb.toFixed(2)} V`;
+            document.getElementById('res-ve').innerText = `${ve.toFixed(2)} V`;
+            document.getElementById('res-vc').innerText = `${vc.toFixed(2)} V`;
+            document.getElementById('res-vce').innerText = `${vce.toFixed(2)} V`;
+            document.getElementById('res-ib').innerText = `${(ib * 1e6).toFixed(1)} µA`;
+            document.getElementById('res-ic').innerText = `${(ic * 1e3).toFixed(2)} mA`;
+            document.getElementById('res-ie').innerText = `${(ie * 1e3).toFixed(2)} mA`;
+
+            // อัปเดตตัวเลขพารามิเตอร์บนวงจร SVG
+            document.getElementById('svg-vcc-label').textContent = `VCC = ${vcc} V`;
+            document.getElementById('svg-r1-val').textContent = `${r1} kΩ`;
+            document.getElementById('svg-r2-val').textContent = `${r2} kΩ`;
+            document.getElementById('svg-rc-val').textContent = `${rc} kΩ`;
+            document.getElementById('svg-re-val').textContent = `${re} kΩ`;
+            document.getElementById('svg-beta-val').textContent = `(β = ${beta})`;
+            
+            document.getElementById('badge-desc-text').innerHTML = `V<sub>CE</sub> = ${vce.toFixed(2)} V > 0.2 V (transistor in active region)`;
+        });
+    </script>
+</body>
+</html>
