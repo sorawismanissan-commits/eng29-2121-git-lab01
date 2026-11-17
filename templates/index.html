@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lab 02: BJT DC Bias Web App</title>
+    <title>Lab 03: BJT DC Bias Web App</title>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -390,6 +390,96 @@
             line-height: 1.45;
         }
 
+        /* ✅ Browser Acceptance Validation */
+        .validation-card {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 1.25rem;
+        }
+
+        .validation-body {
+            padding: 1rem;
+        }
+
+        .validation-note {
+            font-size: 0.8rem;
+            color: #334155;
+            margin-bottom: 0.45rem;
+        }
+
+        .validation-params {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem 1.2rem;
+            font-size: 0.8rem;
+            color: #334155;
+            margin-bottom: 0.8rem;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+        }
+
+        .validation-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+            min-width: 760px;
+        }
+
+        .validation-table th,
+        .validation-table td {
+            border: 1px solid var(--border-color);
+            padding: 0.45rem 0.55rem;
+            vertical-align: top;
+            text-align: left;
+            line-height: 1.45;
+        }
+
+        .validation-table th {
+            background: #f8fafc;
+            color: #0f172a;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .validation-table tbody tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        .validation-table tbody td:nth-child(4),
+        .validation-table tbody td:nth-child(5) {
+            color: #334155;
+        }
+
+        .validation-table tbody td:nth-child(6) {
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .validation-table td.status-pass {
+            color: #15803d;
+            font-weight: 700;
+        }
+
+        .validation-table td.status-fail {
+            color: #b91c1c;
+            font-weight: 700;
+        }
+
+        .validation-table var {
+            font-style: italic;
+            font-family: Georgia, serif;
+        }
+
+        .validation-footnote {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 0.55rem;
+        }
+
         /* 🎯 Footer Goal Area */
         .goal-card {
             background-color: #f0f9ff;
@@ -430,7 +520,7 @@
                     <i class="fa-solid fa-microchip"></i>
                 </div>
                 <div>
-                    <h1>Lab 02: BJT DC Bias Web App</h1>
+                    <h1>Lab 03: BJT DC Bias Web App</h1>
                     <p class="subtitle">ENG29 2121 – Common Emitter Bias Calculator</p>
                 </div>
             </div>
@@ -709,6 +799,82 @@
                 {% endif %}
             </section>
         </main>
+
+        <!-- Browser Acceptance Validation (A1–A5) -->
+        <section class="validation-card">
+            <div class="card-header">
+                <h2><i class="fa-solid fa-clipboard-check"></i> Browser Acceptance Validation (A1–A5)</h2>
+            </div>
+            <div class="validation-body">
+                <p class="validation-note"><strong>ค่าพารามิเตอร์พื้นฐานที่ใช้ร่วมกันใน A1–A5:</strong></p>
+                <ul class="validation-params">
+                    <li><var>V</var><sub>CC</sub> = 12 V</li>
+                    <li><var>R</var><sub>C</sub> = 2.2 kΩ</li>
+                    <li>β = 100</li>
+                    <li><var>V</var><sub>BE</sub> = 0.70 V</li>
+                    <li><strong>เกณฑ์การยอมรับ:</strong> ผลต่างไม่เกิน 0.01 mA สำหรับ <var>I</var><sub>C</sub> และ 0.02 V สำหรับ <var>V</var><sub>CE</sub></li>
+                </ul>
+
+                <div class="table-scroll">
+                    <table class="validation-table">
+                        <thead>
+                            <tr>
+                                <th>กรณี</th>
+                                <th>เลือกโหมดและกรอกค่า</th>
+                                <th>คาดหมายก่อนรัน</th>
+                                <th>เห็นจริง</th>
+                                <th>วิธีตรวจ</th>
+                                <th>สถานะ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>A1 · โหมดเดิม</strong></td>
+                                <td>Divider · <var>R</var><sub>1</sub> = 100 kΩ, <var>R</var><sub>2</sub> = 22 kΩ, <var>R</var><sub>E</sub> = 1 kΩ</td>
+                                <td>ผลต้องตรงกับเมื่อรัน Lab 2 ก่อนแก้ และเทียบได้กับค่าอ้างอิงเดิม<br><strong><var>I</var><sub>C</sub> = 1.23 mA · <var>V</var><sub>CE</sub> = 8.05 V</strong></td>
+                                <td><strong><var>I</var><sub>C</sub> = 1.23 mA · <var>V</var><sub>CE</sub> = 8.05 V</strong><br><var>V</var><sub>B</sub> 1.94 V · <var>V</var><sub>E</sub> 1.24 V · <var>V</var><sub>C</sub> 9.29 V · <var>I</var><sub>B</sub> 12.3 µA · <var>I</var><sub>E</sub> 1.24 mA</td>
+                                <td>OpenCode Browser: เปิด <code>?mode=divider</code> → กรอกค่า → กด Calculate → อ่านตารางหลังโหลด (HTTP 200)</td>
+                                <td class="status-pass">PASS</td>
+                            </tr>
+                            <tr>
+                                <td><strong>A2 · Fixed</strong></td>
+                                <td>Fixed · <var>R</var><sub>B</sub> = 1 MΩ</td>
+                                <td>คำนวณได้โดยไม่ต้องกรอก <var>R</var><sub>E</sub><br><strong><var>I</var><sub>C</sub> = 1.13 mA · <var>V</var><sub>CE</sub> = 9.51 V</strong></td>
+                                <td><strong><var>I</var><sub>C</sub> = 1.13 mA · <var>V</var><sub>CE</sub> = 9.51 V</strong><br><var>V</var><sub>B</sub> 0.70 V · <var>V</var><sub>E</sub> 0.00 V · <var>V</var><sub>C</sub> 9.51 V · <var>I</var><sub>B</sub> 11.3 µA · <var>I</var><sub>E</sub> 1.14 mA</td>
+                                <td>OpenCode Browser: เปิด <code>?mode=fixed</code> (ฟอร์มไม่มีช่อง <var>R</var><sub>E</sub>) → กรอก <var>R</var><sub>B</sub> 1 MΩ → Calculate (HTTP 200)</td>
+                                <td class="status-pass">PASS</td>
+                            </tr>
+                            <tr>
+                                <td><strong>A3 · Emitter</strong></td>
+                                <td>Emitter · <var>R</var><sub>B</sub> = 1 MΩ, <var>R</var><sub>E</sub> = 1 kΩ</td>
+                                <td>มีช่องและใช้ค่า <var>R</var><sub>E</sub><br><strong><var>I</var><sub>C</sub> = 1.03 mA · <var>V</var><sub>CE</sub> = 8.71 V</strong></td>
+                                <td><strong><var>I</var><sub>C</sub> = 1.03 mA · <var>V</var><sub>CE</sub> = 8.71 V</strong><br><var>V</var><sub>B</sub> 1.74 V · <var>V</var><sub>E</sub> 1.04 V · <var>V</var><sub>C</sub> 9.74 V · <var>I</var><sub>B</sub> 10.3 µA · <var>I</var><sub>E</sub> 1.04 mA</td>
+                                <td>OpenCode Browser: เปิด <code>?mode=emitter</code> → กรอก <var>R</var><sub>B</sub> 1 MΩ, <var>R</var><sub>E</sub> 1 kΩ → Calculate (HTTP 200)</td>
+                                <td class="status-pass">PASS</td>
+                            </tr>
+                            <tr>
+                                <td><strong>A4 · เปลี่ยนค่าเดียว</strong></td>
+                                <td>Emitter · เหมือน A3 แต่เปลี่ยน <var>R</var><sub>E</sub> เป็น 2 kΩ</td>
+                                <td>ทำนายก่อนรันว่า <var>I</var><sub>C</sub> จะลดลงจาก A3 (เหลือประมาณ 0.94 mA) เพราะความต้านทาน <var>R</var><sub>E</sub> ที่เพิ่มขึ้นทำให้ตัวหารในสมการ <var>I</var><sub>B</sub> มากขึ้น กระแสเบสและคอลเลกเตอร์จึงลดลง แล้วบันทึกผลจริง</td>
+                                <td><strong><var>I</var><sub>C</sub> = 0.94 mA</strong> (ลดจาก A3 0.09 mA) · <strong><var>V</var><sub>CE</sub> = 8.03 V</strong><br><var>V</var><sub>B</sub> 2.60 V · <var>V</var><sub>E</sub> 1.90 V · <var>V</var><sub>C</sub> 9.93 V · <var>I</var><sub>B</sub> 9.4 µA · <var>I</var><sub>E</sub> 0.95 mA</td>
+                                <td>OpenCode Browser: คงค่าเหมือน A3 เปลี่ยนเฉพาะ <var>R</var><sub>E</sub> = 2 kΩ → Calculate (HTTP 200)</td>
+                                <td class="status-pass">PASS</td>
+                            </tr>
+                            <tr>
+                                <td><strong>A5 · อินพุตผิด</strong></td>
+                                <td>Fixed · <var>R</var><sub>B</sub> = 0</td>
+                                <td>มีข้อความให้แก้ <var>R</var><sub>B</sub> (ต้องมากกว่า 0) เว็บไม่ล่ม และไม่แสดงผลเดิมเป็นผลของรอบนี้ (และมีการตรวจอินพุตใน Flask ด้วย)</td>
+                                <td><strong>HTTP 400</strong> · badge แดง "Calculation Error — Fixed Bias"<br>ข้อความ "RB ต้องมากกว่า 0" · ตารางผลเป็น — ทั้ง 7 ช่อง</td>
+                                <td>OpenCode Browser: เปิด <code>?mode=fixed</code> ใส่ <var>R</var><sub>B</sub> = 0 → Calculate → ตรวจ badge, ตาราง และ HTTP status</td>
+                                <td class="status-pass">PASS</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p class="validation-footnote">หมายเหตุ: รันผ่าน OpenCode Browser tool (Chrome จริง) — Playwright MCP ยังไม่ติดตั้งในเครื่องนี้; ค่าคาดหมายอ้างอิงจากตารางใบงานเท่านั้น</p>
+            </div>
+        </section>
 
         <!-- Footer -->
         <footer class="goal-card">

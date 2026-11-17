@@ -1,4 +1,4 @@
-# Lab 02 — BJT DC Bias Web App
+# Lab 03 — BJT DC Bias Web App
 
 เว็บแอป Flask สำหรับคำนวณ DC Bias ของ BJT แบบ Common-Emitter 3 โหมด
 สูตรการคำนวณทั้งหมดอยู่ใน `dc_bias.py` (Python) เท่านั้น — HTML/JavaScript ไม่มีสมการ

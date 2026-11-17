@@ -80,7 +80,10 @@ class CalculateFormTests(unittest.TestCase):
         self.assertEqual(res.status_code, 400)
         body = res.get_data(as_text=True)
         self.assertIn("β ต้องมากกว่า 0", body)
-        self.assertNotIn("1.23", body)
+        # The acceptance log quotes reference values from the lab sheet, so
+        # check the result cells themselves rather than the whole page.
+        for field in ("vb", "ve", "vc", "vce", "ib", "ic", "ie"):
+            self.assertIn(f'id="res-{field}">—</td>', body)
 
     def test_ignores_fields_the_mode_does_not_use(self):
         res = self.client.post(
