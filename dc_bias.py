@@ -37,7 +37,7 @@ def _cutoff(vcc, vb):
 
 
 def _solve_region(vcc, rc, re, beta, ib, vbe):
-    """แก้กระแส/แรงดันและจำแนก Active | Saturation (คงวิธี clamp เดิมของ Divider)"""
+    """แก้กระแส/แรงดันและจำแนก Active | Saturation"""
     ic = beta * ib
     ie = (1 + beta) * ib
     ve = ie * re
@@ -45,17 +45,22 @@ def _solve_region(vcc, rc, re, beta, ib, vbe):
     vc = vcc - (ic * rc)
     vce = vc - ve
 
-    ic_sat = (vcc - VCE_SAT) / (rc + re)
+    # กระแสอิ่มตัวจาก KVL: VCC = IC·RC + VCE(sat) + IE·RE โดย IE = IC + IB
+    # (สมการเดิมใช้ (VCC - VCEsat)/(RC + RE) ซึ่งละ IB·RE ไว้)
+    ic_sat = (vcc - VCE_SAT - ib * re) / (rc + re)
 
     if vce <= VCE_SAT or ic >= ic_sat:
-        # คงพฤติกรรมเดิม: clamp กระแสอิ่มตัวและ VCE ที่ 0.2 V
         message = (
             f"VCE {vce:.2f} V < {VCE_SAT:.2f} V: Saturation "
             "(การประมาณ active region ใช้ไม่ได้)"
         )
+        # ที่จุดอิ่มตัว: clamp IC ที่ IC(sat) และ VCE ที่ 0.2 V
+        # แล้วคำนวณ IE, VE, VC, VB ให้สอดคล้องกัน (IE = IC + IB)
         ic = ic_sat
+        ie = ic + ib
+        ve = ie * re
         vce = VCE_SAT
-        vc = ve + VCE_SAT
+        vc = ve + vce
         vb = ve + vbe
         return _pack("Saturation", message, ib, ic, ie, vb, ve, vc, vce)
 

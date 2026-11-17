@@ -85,7 +85,7 @@ pip install -r requirements.txt
 | เงื่อนไข | region | ผลลัพธ์ |
 |---|---|---|
 | `IB ≤ 0` | Cutoff | IB = IC = IE = 0, VE = 0, VCE = VC = VCC, VB = VTH (divider) หรือ VCC |
-| `VCE ≤ 0.2 V` หรือ `IC ≥ IC(sat)` | Saturation | clamp `IC = (VCC − 0.2)/(RC + RE)`, `VCE = 0.2 V` ตามวิธี Divider เดิม |
+| `VCE ≤ 0.2 V` หรือ `IC ≥ IC(sat)` | Saturation | `IC = (VCC − 0.2 − IB·RE)/(RC + RE)`, `VCE = 0.2 V`, `IE = IC + IB`, `VE = IE·RE`, `VC = VE + 0.2 V` (KVL ปิดครบ) |
 | อื่น ๆ | Active | ใช้ค่าที่คำนวณได้ตามสมการ |
 
 ## กรณีอ้างอิง (baseline Lab 2)

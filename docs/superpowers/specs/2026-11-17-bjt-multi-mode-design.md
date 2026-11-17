@@ -81,7 +81,7 @@ def calculate_divider_bias(vcc, r1, r2, rc, re, beta, vbe=0.7) -> dict
 ### 5.4 Region และข้อความ
 
 - `IB ≤ 0` → `region="Cutoff"`, `status="Success"`, กระแส 0, `VCE=VCC`, ข้อความ "IB ≤ 0: อยู่ใน Cutoff (แบบจำลอง active region ใช้ไม่ได้)"
-- `VCE < 0.2 V` → `region="Saturation"` และ clamp ตามวิธี Divider เดิม (IC=ICsat, VCE=0.2) พร้อมข้อความ "VCE ... < 0.2 V: Saturation (การประมาณ active region ใช้ไม่ได้)"
+- `VCE < 0.2 V` → `region="Saturation"` และ clamp ที่ VCE=0.2 V โดยให้กระแส/แรงดันสอดคล้องกัน: `IC = (VCC − 0.2 − IB·RE)/(RC + RE)`, `IE = IC + IB`, `VE = IE·RE`, `VC = VE + 0.2`, `VB = VE + VBE` (KVL ปิดครบ) พร้อมข้อความ "VCE ... < 0.2 V: Saturation (การประมาณ active region ใช้ไม่ได้)"
 - ปกติ → `Active` พร้อมข้อความ "VCE = ... V > 0.2 V (transistor in active region)"
 
 ### 5.5 เทสต์
@@ -94,7 +94,7 @@ def calculate_divider_bias(vcc, r1, r2, rc, re, beta, vbe=0.7) -> dict
 | Fixed | RB 1 MΩ | IB 11.3 µA, IC 1.13 mA, VE 0, VB 0.7 V, VCE 9.514 V |
 | Emitter | RB 1 MΩ, RE 1k | IB 10.2634 µA, IC 1.0263 mA, VCE 8.7055 V |
 | Cutoff | Divider VBE 2.5 | กระแส 0, region Cutoff |
-| Saturation | Divider RC 10k, RE 100Ω | region Saturation, IC = ICsat 1.1683 mA, VCE 0.2 V |
+| Saturation | Divider RC 10k, RE 100Ω | region Saturation, IC 1.1678 mA, IE 1.2198 mA, VE 0.122 V, VC 0.322 V, VCE 0.2 V |
 | โหมดผิด | `mode=hbridge` | 400 + "โหมดไม่ถูกต้อง" |
 | ฟิลด์ผิด | β=0 | 400 + "β ต้องมากกว่า 0"; ตารางผลไม่มีตัวเลข |
 | GET โหมด | `/?mode=fixed` | มีช่อง rb, ไม่มีช่อง r1/r2/re |
@@ -102,7 +102,7 @@ def calculate_divider_bias(vcc, r1, r2, rc, re, beta, vbe=0.7) -> dict
 ## 6. Decisions
 
 1. ใช้ชื่อคีย์แบบ Lab 2 (`vb_V` ฯลฯ) ตามที่ใบงานอนุญาต
-2. คงการ clamp ตอน Saturation ตามวิธี Divider เดิม เพื่อไม่ให้ผลสามโหมดต่างกัน
+2. คงการ clamp ตอน Saturation (VCE=0.2 V) เพื่อไม่ให้ผลสามโหมดต่างกัน และให้ IE = IC + IB พร้อม VE/VC สอดคล้องกับ KVL
 3. ลบ `static/js/script.js` (โค้ดตาย) และไม่เพิ่ม JS ใหม่
 4. `POST /calculate` เป็นหน้า HTML; `POST /api/calculate` ยังเป็น JSON สำหรับทดสอบ
 5. ข้อความ UI ภาษาไทยสั้น ๆ ตามข้อ 5.4
