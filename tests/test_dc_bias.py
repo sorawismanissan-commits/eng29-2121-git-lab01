@@ -87,6 +87,12 @@ class BiasTests(unittest.TestCase):
         self.assertAlmostEqual(r["vce_V"], 0.2, places=3)
         self.assertIn("Saturation", r["message"])
 
+    def test_saturation_message_reports_computed_vce_not_clamped_value(self):
+        r = calculate_divider_bias(
+            12.0, 100_000.0, 22_000.0, 10_000.0, 100.0, 100.0
+        )
+        self.assertIn("VCE -40.56 V < 0.20 V", r["message"])
+
     def test_active_message_reports_vce(self):
         r = calculate_fixed_bias(12.0, 1_000_000.0, 2_200.0, 100.0)
         self.assertIn("VCE", r["message"])

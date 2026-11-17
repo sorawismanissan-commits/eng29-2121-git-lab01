@@ -49,14 +49,14 @@ def _solve_region(vcc, rc, re, beta, ib, vbe):
 
     if vce <= VCE_SAT or ic >= ic_sat:
         # คงพฤติกรรมเดิม: clamp กระแสอิ่มตัวและ VCE ที่ 0.2 V
-        ic = ic_sat
-        vce = VCE_SAT
-        vc = ve + VCE_SAT
-        vb = ve + vbe
         message = (
             f"VCE {vce:.2f} V < {VCE_SAT:.2f} V: Saturation "
             "(การประมาณ active region ใช้ไม่ได้)"
         )
+        ic = ic_sat
+        vce = VCE_SAT
+        vc = ve + VCE_SAT
+        vb = ve + vbe
         return _pack("Saturation", message, ib, ic, ie, vb, ve, vc, vce)
 
     message = f"VCE = {vce:.2f} V > {VCE_SAT:.2f} V (transistor in active region)"
