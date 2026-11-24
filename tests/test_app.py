@@ -1,6 +1,8 @@
 import unittest
+from unittest.mock import patch
 
-from app import app
+from app import app, parse_spice_request
+from spice_engine import SpiceError
 
 FORM = {
     "mode": "divider",
@@ -142,6 +144,138 @@ class JsonApiTests(unittest.TestCase):
         res = self.client.post("/api/calculate", json={**FORM, "vbe": -0.1})
         self.assertEqual(res.status_code, 400)
         self.assertEqual(res.get_json()["message"], "VBE ต้องไม่ติดลบ")
+
+
+SPICE_FORM = {
+    **FORM,
+    "analysis": "dc",
+    "vin_amp_mv": "10",
+    "vin_freq_hz": "1000",
+    "ac_start_hz": "10",
+    "ac_stop_hz": "1000000",
+    "ac_ppd": "10",
+    "tran_stop_ms": "5",
+    "tran_step_us": "10",
+    "rl_kohm": "10",
+}
+
+
+FAKE_DC = {
+    "status": "Success",
+    "analysis": "dc",
+    "run_id": "20261124-160000-abcdef12",
+    "engine": "ngspice",
+    "engine_version": "ngspice-47",
+    "model": "QNPN NPN (BF=100 IS=1e-15 VAF=100)",
+    "model_source": "provisional",
+    "duration_ms": 80,
+    "warnings": [],
+    "netlist": "* test",
+    "artifacts": {"directory": "instance/spice_runs/20261124-160000-abcdef12"},
+    "dc": {"vb_V": 1.9576, "ve_V": 1.2395, "vc_V": 9.2984,
+           "vce_V": 8.0589, "ib_uA": 11.4476, "ic_mA": 1.2288, "ie_mA": 1.2402},
+}
+
+
+class SpiceValidationTests(unittest.TestCase):
+    def test_converts_form_units_to_si(self):
+        req = parse_spice_request(SPICE_FORM)
+        self.assertEqual(req.analysis, "dc")
+        self.assertAlmostEqual(req.vin_amp_V, 0.010)
+        self.assertAlmostEqual(req.vin_freq_Hz, 1000.0)
+        self.assertAlmostEqual(req.ac_start_Hz, 10.0)
+        self.assertAlmostEqual(req.ac_stop_Hz, 1_000_000.0)
+        self.assertEqual(req.ac_ppd, 10)
+        self.assertAlmostEqual(req.tran_stop_s, 0.005)
+        self.assertAlmostEqual(req.tran_step_s, 0.00001)
+        self.assertAlmostEqual(req.rl_ohm, 10_000.0)
+        self.assertAlmostEqual(req.r1_ohm, 100_000.0)
+        self.assertAlmostEqual(req.vcc_V, 12.0)
+
+    def test_rejects_unknown_analysis(self):
+        with self.assertRaises(ValueError):
+            parse_spice_request({**SPICE_FORM, "analysis": "all"})
+
+    def test_rejects_zero_frequency(self):
+        with self.assertRaises(ValueError):
+            parse_spice_request({**SPICE_FORM, "vin_freq_hz": "0"})
+
+    def test_rejects_bad_ac_range_and_ppd(self):
+        with self.assertRaises(ValueError):
+            parse_spice_request({**SPICE_FORM, "ac_stop_hz": "10"})
+        with self.assertRaises(ValueError):
+            parse_spice_request({**SPICE_FORM, "ac_ppd": "101"})
+
+    def test_rejects_bad_transient_range(self):
+        with self.assertRaises(ValueError):
+            parse_spice_request({**SPICE_FORM, "tran_step_us": "5000"})
+
+
+class SpiceRouteTests(unittest.TestCase):
+    def setUp(self):
+        self.client = app.test_client()
+
+    def test_dc_calls_engine_and_keeps_analytical(self):
+        with patch("app.run_ngspice", return_value=FAKE_DC) as engine:
+            res = self.client.post("/spice", data=SPICE_FORM)
+        self.assertEqual(res.status_code, 200)
+        body = res.get_data(as_text=True)
+        self.assertIn("1.23", body)
+        self.assertEqual(engine.call_count, 1)
+        self.assertEqual(engine.call_args.args[0].analysis, "dc")
+
+    def test_rejects_non_divider_mode(self):
+        res = self.client.post("/spice", data={**SPICE_FORM, "mode": "fixed"})
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("Voltage Divider", res.get_data(as_text=True))
+
+    def test_rejects_unknown_analysis(self):
+        res = self.client.post("/spice", data={**SPICE_FORM, "analysis": "all"})
+        self.assertEqual(res.status_code, 400)
+
+    def test_bad_spice_setting_keeps_analytical_result(self):
+        res = self.client.post("/spice", data={**SPICE_FORM, "vin_freq_hz": "0"})
+        self.assertEqual(res.status_code, 400)
+        body = res.get_data(as_text=True)
+        self.assertIn("1.23", body)
+        self.assertNotIn("sim-plot", body)
+
+    def test_engine_error_returns_502(self):
+        error = SpiceError("not_found", "ไม่พบ ngspice", run_id="run-1", artifacts={})
+        with patch("app.run_ngspice", side_effect=error):
+            res = self.client.post("/spice", data=SPICE_FORM)
+        self.assertEqual(res.status_code, 502)
+        self.assertIn("1.23", res.get_data(as_text=True))
+
+    def test_timeout_returns_504(self):
+        error = SpiceError("timeout", "หมดเวลา", run_id="run-2", artifacts={})
+        with patch("app.run_ngspice", side_effect=error):
+            res = self.client.post("/spice", data=SPICE_FORM)
+        self.assertEqual(res.status_code, 504)
+
+    def test_api_spice_returns_analytical_and_spice(self):
+        with patch("app.run_ngspice", return_value=FAKE_DC):
+            res = self.client.post("/api/spice", json=SPICE_FORM)
+        self.assertEqual(res.status_code, 200)
+        payload = res.get_json()
+        self.assertEqual(payload["status"], "Success")
+        self.assertAlmostEqual(payload["analytical"]["ic_mA"], 1.2298, places=3)
+        self.assertEqual(payload["spice"]["run_id"], FAKE_DC["run_id"])
+
+    def test_api_spice_engine_error_carries_run_id(self):
+        error = SpiceError("not_found", "ไม่พบ ngspice", run_id="run-json-1", artifacts={})
+        with patch("app.run_ngspice", side_effect=error):
+            res = self.client.post("/api/spice", json=SPICE_FORM)
+        self.assertEqual(res.status_code, 502)
+        body = res.get_json()
+        self.assertEqual(body["status"], "Error")
+        self.assertEqual(body["kind"], "not_found")
+        self.assertEqual(body["run_id"], "run-json-1")
+
+    def test_api_spice_rejects_unknown_analysis(self):
+        res = self.client.post("/api/spice", json={**SPICE_FORM, "analysis": "all"})
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.get_json()["status"], "Error")
 
 
 if __name__ == "__main__":

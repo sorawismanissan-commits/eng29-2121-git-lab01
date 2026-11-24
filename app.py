@@ -7,6 +7,8 @@ from dc_bias import (
     calculate_emitter_bias,
     calculate_fixed_bias,
 )
+from spice_engine import SpiceError, SpiceRequest, run_ngspice
+from spice_plots import line_chart
 
 app = Flask(__name__)
 
@@ -82,7 +84,107 @@ def parse_and_solve(mode, data):
         return calculate_divider_bias(vcc, r1, r2, rc, re, beta, vbe)
 
 
-def _render(mode, values, result=None, error=None, status_code=200):
+ANALYSES = ("dc", "ac", "tran")
+
+
+def parse_spice_request(data):
+    """Validate the SPICE-only fields and convert form units to SI."""
+    data = data or {}
+    analysis = str(data.get("analysis", "")).strip().lower()
+    if analysis not in ANALYSES:
+        raise ValidationError("Analysis Mode ต้องเป็น dc, ac หรือ tran เท่านั้น")
+
+    vin_amp_V = _number(data, "vin_amp_mv", "Source amplitude", scale=1e-3)
+    if vin_amp_V <= 0:
+        raise ValidationError("Source amplitude ต้องมากกว่า 0")
+    vin_freq_Hz = _number(data, "vin_freq_hz", "Source frequency")
+    if vin_freq_Hz <= 0:
+        raise ValidationError("Source frequency ต้องมากกว่า 0")
+
+    ac_start_Hz = _number(data, "ac_start_hz", "AC start")
+    ac_stop_Hz = _number(data, "ac_stop_hz", "AC stop")
+    if ac_start_Hz <= 0 or ac_stop_Hz <= ac_start_Hz:
+        raise ValidationError("AC start ต้องมากกว่า 0 และน้อยกว่า AC stop")
+    raw_ppd = _number(data, "ac_ppd", "AC points/decade")
+    if raw_ppd != int(raw_ppd) or not 1 <= int(raw_ppd) <= 100:
+        raise ValidationError("AC points/decade ต้องเป็นจำนวนเต็ม 1–100")
+
+    tran_stop_s = _number(data, "tran_stop_ms", "Transient stop", scale=1e-3)
+    tran_step_s = _number(data, "tran_step_us", "Transient max step", scale=1e-6)
+    if tran_stop_s <= 0 or tran_step_s <= 0 or tran_step_s >= tran_stop_s:
+        raise ValidationError("Max step ต้องมากกว่า 0 และน้อยกว่า Transient stop")
+
+    rl_ohm = _number(data, "rl_kohm", "Load resistor", scale=1_000.0)
+    if rl_ohm <= 0:
+        raise ValidationError("Load resistor ต้องมากกว่า 0")
+    vcc = _number(data, "vcc", "VCC")
+    if vcc <= 0:
+        raise ValidationError("VCC ต้องมากกว่า 0")
+    rc = _positive_resistance(data, "rc", "RC")
+    beta = _number(data, "beta", "β")
+    if beta <= 0:
+        raise ValidationError("β ต้องมากกว่า 0")
+    vbe = _number(data, "vbe", "VBE")
+    if vbe < 0:
+        raise ValidationError("VBE ต้องไม่ติดลบ")
+    r1 = _positive_resistance(data, "r1", "R1")
+    r2 = _positive_resistance(data, "r2", "R2")
+    re = _positive_resistance(data, "re", "RE")
+
+    return SpiceRequest(
+        analysis=analysis,
+        vcc_V=vcc,
+        r1_ohm=r1,
+        r2_ohm=r2,
+        rc_ohm=rc,
+        re_ohm=re,
+        beta=beta,
+        vbe_V=vbe,
+        vin_amp_V=vin_amp_V,
+        vin_freq_Hz=vin_freq_Hz,
+        ac_start_Hz=ac_start_Hz,
+        ac_stop_Hz=ac_stop_Hz,
+        ac_ppd=int(raw_ppd),
+        tran_stop_s=tran_stop_s,
+        tran_step_s=tran_step_s,
+        rl_ohm=rl_ohm,
+    )
+
+
+def _attach_plots(spice):
+    """Build server-rendered SVG strings for the selected analysis."""
+    plots = {}
+    if spice.get("analysis") == "ac" and spice.get("ac"):
+        points = spice["ac"]
+        plots["magnitude"] = line_chart(
+            [{"name": "Gain", "color": "#0c8e83",
+              "points": [(p["freq_Hz"], p["gain_db"]) for p in points]}],
+            "Frequency (Hz)", "Gain (dB)", log_x=True,
+        )
+        plots["phase"] = line_chart(
+            [{"name": "Phase", "color": "#c77a35",
+              "points": [(p["freq_Hz"], p["phase_deg"]) for p in points]}],
+            "Frequency (Hz)", "Phase (°)", log_x=True,
+        )
+    elif spice.get("analysis") == "tran" and spice.get("tran"):
+        points = spice["tran"]
+        plots["waveform"] = line_chart(
+            [
+                {"name": "Vin", "color": "#8a94a6",
+                 "points": [(p["time_ms"], p["vin_V"]) for p in points]},
+                {"name": "Vout", "color": "#c77a35",
+                 "points": [(p["time_ms"], p["vout_V"]) for p in points]},
+            ],
+            "Time (ms)", "Voltage (V)",
+        )
+    spice["plots"] = plots
+    return spice
+
+
+def _render(
+    mode, values, result=None, error=None, status_code=200,
+    spice=None, spice_error=None, spice_analysis="dc", spice_values=None,
+):
     return (
         render_template(
             "index.html",
@@ -92,6 +194,10 @@ def _render(mode, values, result=None, error=None, status_code=200):
             values=values,
             result=result,
             error=error,
+            spice=spice,
+            spice_error=spice_error,
+            spice_analysis=spice_analysis,
+            spice_values=spice_values,
         ),
         status_code,
     )
@@ -131,6 +237,76 @@ def calculate_api():
     except ValidationError as exc:
         return jsonify({"status": "Error", "message": str(exc)}), 400
     return jsonify(result)
+
+
+@app.post("/spice")
+def spice_form():
+    data = request.form
+    mode = str(data.get("mode", "")).strip().lower()
+    analysis = str(data.get("analysis", "")).strip().lower()
+    spice_analysis = analysis if analysis in ANALYSES else "dc"
+    if mode != "divider":
+        return _render(
+            mode if mode in MODE_LABELS else DEFAULT_MODE,
+            data,
+            error="SPICE v1 รองรับเฉพาะ Voltage Divider Bias",
+            status_code=400,
+            spice_analysis=spice_analysis,
+            spice_values=data,
+        )
+    try:
+        result = parse_and_solve("divider", data)
+    except ValidationError as exc:
+        return _render(
+            mode, data, error=str(exc), status_code=400,
+            spice_analysis=spice_analysis, spice_values=data,
+        )
+    try:
+        spice_request = parse_spice_request(data)
+    except ValidationError as exc:
+        return _render(
+            mode, data, result=result, spice_error=exc, status_code=400,
+            spice_analysis=spice_analysis, spice_values=data,
+        )
+    try:
+        spice = _attach_plots(run_ngspice(spice_request))
+    except SpiceError as exc:
+        status_code = 504 if exc.kind == "timeout" else 502
+        return _render(
+            mode, data, result=result, spice_error=exc, status_code=status_code,
+            spice_analysis=spice_analysis, spice_values=data,
+        )
+    return _render(
+        mode, data, result=result, spice=spice,
+        spice_analysis=spice_analysis, spice_values=data,
+    )
+
+
+@app.post("/api/spice")
+def spice_api():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"status": "Error", "message": "ข้อมูลต้องเป็น JSON object"}), 400
+    mode = str(data.get("mode", "")).strip().lower()
+    if mode != "divider":
+        return jsonify({"status": "Error", "message": "SPICE v1 รองรับเฉพาะ Voltage Divider Bias"}), 400
+    try:
+        result = parse_and_solve("divider", data)
+        spice_request = parse_spice_request(data)
+    except ValidationError as exc:
+        return jsonify({"status": "Error", "message": str(exc)}), 400
+    try:
+        spice = _attach_plots(run_ngspice(spice_request))
+    except SpiceError as exc:
+        status_code = 504 if exc.kind == "timeout" else 502
+        return jsonify({
+            "status": "Error",
+            "kind": exc.kind,
+            "message": exc.message,
+            "run_id": exc.run_id,
+            "artifacts": exc.artifacts,
+        }), status_code
+    return jsonify({"status": "Success", "analytical": result, "spice": spice})
 
 
 if __name__ == "__main__":
