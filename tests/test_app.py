@@ -435,6 +435,22 @@ class SpiceTemplateTests(unittest.TestCase):
         self.assertIn("Engine: ngspice", body)
         self.assertIn("DC Operating Point", body)
 
+    def test_dashboard_has_three_columns_and_navy_header(self):
+        html = self.client.get("/?mode=divider").get_data(as_text=True)
+        for marker in ('id="dashboard-header"', 'id="circuit-schematic"',
+                       'id="input-parameters"', 'id="simulation-controls"',
+                       'id="engineering-results"'):
+            self.assertIn(marker, html)
+        self.assertIn("#103658", html)
+        self.assertIn("CE Amplifier Lab", html)
+
+    def test_fixed_and_emitter_modes_keep_lab3_form(self):
+        for mode in ("fixed", "emitter"):
+            html = self.client.get("/?mode=" + mode).get_data(as_text=True)
+            self.assertIn('name="rb"', html)
+            self.assertNotIn("Run Simulation", html)
+            self.assertIn('href="/?mode=divider"', html)
+
 
 if __name__ == "__main__":
     unittest.main()
