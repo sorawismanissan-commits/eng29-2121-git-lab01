@@ -5,12 +5,17 @@ run artifacts.  Values crossing this boundary are SI (V, ohm, Hz, s); the
 HTTP layer is responsible for converting form units.
 """
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from datetime import datetime
 from decimal import Decimal
+import json
 import math
 import os
 from pathlib import Path
 import shutil
+import subprocess
+import time
+import uuid
 
 
 class SpiceError(Exception):
@@ -196,3 +201,134 @@ def build_netlist(request):
         "",
     ]
     return "\n".join(lines)
+
+
+_OUTPUT_FILES = {"dc": "op.csv", "ac": "ac.csv", "tran": "tran.csv"}
+_FATAL_PATTERNS = ("fatal error", "singular matrix", "no such file", "can't open", "cannot open")
+
+
+def run_ngspice(request, timeout=15.0, runs_root=None):
+    """Execute one ngspice analysis and persist every artifact for that run.
+
+    Every engine failure carries ``run_id`` and ``artifacts`` so the caller can
+    show provenance even when the run failed.  A run directory (with an initial
+    ``meta.json``) is created before the subprocess starts; ``meta.json`` is
+    always rewritten with the final status in ``finally``.
+    """
+    root = Path(runs_root) if runs_root is not None else Path("instance/spice_runs")
+    run_id = datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8]
+    run_dir = root / run_id
+    run_dir.mkdir(parents=True, exist_ok=False)
+
+    artifacts = {
+        "run_id": run_id,
+        "directory": str(run_dir),
+        "netlist": "circuit.cir",
+        "request": "request.json",
+        "log": "ngspice.log",
+        "meta": "meta.json",
+        "output": _OUTPUT_FILES.get(request.analysis),
+    }
+
+    def write_meta(status, kind=None, message=None, duration_ms=0, model=None, model_source=None):
+        meta = {
+            "status": status,
+            "kind": kind,
+            "message": message,
+            "analysis": request.analysis,
+            "run_id": run_id,
+            "duration_ms": duration_ms,
+            "model": model,
+            "model_source": model_source,
+            "artifacts": artifacts,
+        }
+        (run_dir / "meta.json").write_text(
+            json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+    write_meta("running")
+
+    model = None
+    model_source = None
+    result = None
+    error = None
+    status = "failed"
+    kind = None
+    message = None
+    started = time.perf_counter()
+
+    try:
+        netlist = build_netlist(request)
+        (run_dir / "circuit.cir").write_text(netlist, encoding="utf-8")
+        (run_dir / "request.json").write_text(
+            json.dumps(asdict(request), ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        model, model_source = find_model(request.beta)
+        ngspice = find_ngspice()
+
+        completed = subprocess.run(
+            [ngspice, "-b", "circuit.cir"],
+            cwd=run_dir,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+        )
+        log = f"STDOUT:\n{completed.stdout}\nSTDERR:\n{completed.stderr}\n"
+        (run_dir / "ngspice.log").write_text(log, encoding="utf-8")
+
+        if completed.returncode != 0:
+            raise SpiceError(
+                "process_error",
+                f"ngspice ออกด้วยโค้ด {completed.returncode}: {completed.stderr.strip() or completed.stdout.strip()}",
+            )
+        lowered = log.lower()
+        for pattern in _FATAL_PATTERNS:
+            if pattern in lowered:
+                raise SpiceError("process_error", f"ngspice รายงานความผิดพลาดร้ายแรง ({pattern})")
+
+        output_name = _OUTPUT_FILES[request.analysis]
+        output_path = run_dir / output_name
+        if not output_path.is_file():
+            raise SpiceError("missing_output", f"ngspice ไม่เขียนไฟล์ผล {output_name}")
+
+        parsers = {
+            "dc": lambda: {"dc": parse_op_csv(output_path)},
+            "ac": lambda: {"ac": parse_ac_csv(output_path)},
+            "tran": lambda: {"tran": parse_tran_csv(output_path)},
+        }
+        payload = parsers[request.analysis]()
+        result = {
+            "engine": "ngspice",
+            "engine_version": None,
+            "status": "Success",
+            "analysis": request.analysis,
+            "run_id": run_id,
+            "duration_ms": 0,
+            "model": model,
+            "model_source": model_source,
+            "netlist": netlist,
+            "warnings": [],
+            "artifacts": artifacts,
+        }
+        result.update(payload)
+        status = "Success"
+    except subprocess.TimeoutExpired as exc:
+        kind, message = "timeout", f"ngspice หมดเวลาเกิน {timeout:g} วินาที"
+        error = SpiceError(kind, message, run_id=run_id, artifacts=artifacts)
+    except SpiceError as exc:
+        kind, message = exc.kind, exc.message
+        error = SpiceError(kind, message, run_id=run_id, artifacts=artifacts)
+    except OSError as exc:
+        kind, message = "process_error", f"เรียกใช้ ngspice ไม่ได้: {exc}"
+        error = SpiceError(kind, message, run_id=run_id, artifacts=artifacts)
+    finally:
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        write_meta(status, kind, message, duration_ms, model, model_source)
+        if result is not None:
+            result["duration_ms"] = duration_ms
+
+    if error is not None:
+        raise error
+    return result

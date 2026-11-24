@@ -1,4 +1,7 @@
+import json
 import os
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,7 +16,24 @@ from spice_engine import (
     parse_ac_csv,
     parse_op_csv,
     parse_tran_csv,
+    run_ngspice,
 )
+
+
+def ngspice_path():
+    env = os.environ.get("NGSPICE_BIN")
+    if env and Path(env).is_file():
+        return env
+    for name in ("ngspice_con", "ngspice_con.exe"):
+        found = shutil.which(name)
+        if found:
+            return found
+    known = Path(os.environ.get("LOCALAPPDATA", "")) / "ngspice" / "47" / "Spice64" / "bin" / "ngspice_con.exe"
+    return str(known) if known.is_file() else None
+
+
+def find_ngspice_available():
+    return ngspice_path() is not None
 
 
 def request(analysis="dc", **overrides):
@@ -140,3 +160,40 @@ class ParserTests(unittest.TestCase):
         with self.assertRaises(SpiceError) as ctx:
             parse_tran_csv(self.write(""))
         self.assertEqual(ctx.exception.kind, "parse_error")
+
+
+class RunTests(unittest.TestCase):
+    def test_run_dc_with_real_ngspice(self):
+        if not find_ngspice_available():
+            self.skipTest("ngspice_con not available in this environment")
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.dict(os.environ, {"NGSPICE_BIN": ngspice_path()}):
+                result = run_ngspice(request("dc"), runs_root=Path(tmp))
+            self.assertEqual(result["status"], "Success")
+            self.assertEqual(result["analysis"], "dc")
+            self.assertAlmostEqual(result["dc"]["ic_mA"], 1.2288, delta=0.05)
+            self.assertAlmostEqual(result["dc"]["vce_V"], 8.0589, delta=0.1)
+            self.assertTrue((Path(tmp) / result["run_id"] / "meta.json").exists())
+            self.assertTrue((Path(tmp) / result["run_id"] / "circuit.cir").exists())
+
+    def test_timeout_keeps_run_dir_and_meta(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.dict(os.environ, {"NGSPICE_BIN": "C:/fake/ngspice_con.exe"}):
+                with patch("spice_engine.subprocess.run", side_effect=subprocess.TimeoutExpired("ngspice", 1)):
+                    with self.assertRaises(SpiceError) as ctx:
+                        run_ngspice(request("dc"), runs_root=Path(tmp))
+            err = ctx.exception
+            self.assertEqual(err.kind, "timeout")
+            self.assertIsNotNone(err.run_id)
+            meta = Path(tmp) / err.run_id / "meta.json"
+            self.assertTrue(meta.exists())
+            self.assertEqual(json.loads(meta.read_text(encoding="utf-8"))["kind"], "timeout")
+
+    def test_process_error_is_not_success(self):
+        fake = subprocess.CompletedProcess(["ngspice"], 1, "", "singular matrix")
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.dict(os.environ, {"NGSPICE_BIN": "C:/fake/ngspice_con.exe"}):
+                with patch("spice_engine.subprocess.run", return_value=fake):
+                    with self.assertRaises(SpiceError) as ctx:
+                        run_ngspice(request("dc"), runs_root=Path(tmp))
+            self.assertEqual(ctx.exception.kind, "process_error")
