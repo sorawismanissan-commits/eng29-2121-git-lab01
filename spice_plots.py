@@ -10,7 +10,7 @@ import math
 
 
 def _fmt(value):
-    if abs(value) >= 1000 or (0 < abs(value) < 0.01):
+    if abs(value) >= 1000 or (0 < abs(value) < 1e-4):
         return f"{value:.2g}"
     if abs(value - round(value)) < 1e-9:
         return str(int(round(value)))
@@ -33,7 +33,7 @@ def line_chart(series, x_label, y_label, *, log_x=False, width=720, height=320):
     if not usable:
         return '<p class="plot-empty">ไม่มีข้อมูลสำหรับกราฟนี้</p>'
 
-    left, right, top, bottom = 64, 20, 20, 76
+    left, right, top, bottom = 100, 48, 24, 80
     plot_w, plot_h = width - left - right, height - top - bottom
 
     raw_x = [float(x) for item in usable for x, _y in item["points"]]
@@ -54,6 +54,8 @@ def line_chart(series, x_label, y_label, *, log_x=False, width=720, height=320):
         ymin, ymax = ymin - 1, ymax + 1
     ypad = (ymax - ymin) * 0.05
     ymin, ymax = ymin - ypad, ymax + ypad
+    y_zero_tol = (ymax - ymin) * 1e-3
+    x_zero_tol = (xmax - xmin) * 1e-3
 
     def px(value):
         return left + (value - xmin) / (xmax - xmin) * plot_w
@@ -61,9 +63,12 @@ def line_chart(series, x_label, y_label, *, log_x=False, width=720, height=320):
     def py(value):
         return top + plot_h - (value - ymin) / (ymax - ymin) * plot_h
 
+    series_names = ", ".join(str(item.get("name", "")) for item in usable)
+    accessible_label = escape(f"{y_label} versus {x_label}; series: {series_names}")
     parts = [
-        f'<svg viewBox="0 0 {width} {height}" width="100%" height="auto" '
-        'role="img" xmlns="http://www.w3.org/2000/svg" class="sim-plot">',
+        f'<svg viewBox="0 0 {width} {height}" width="100%" height="{height}" '
+        f'role="img" aria-label="{accessible_label}" '
+        'xmlns="http://www.w3.org/2000/svg" class="sim-plot">',
         f'<rect x="{left}" y="{top}" width="{plot_w}" height="{plot_h}" '
         'fill="#fbfcfe" stroke="#dde3ec"/>',
     ]
@@ -74,14 +79,19 @@ def line_chart(series, x_label, y_label, *, log_x=False, width=720, height=320):
         gy = top + plot_h - frac * plot_h
         xv = xmin + frac * (xmax - xmin)
         yv = ymin + frac * (ymax - ymin)
+        if not log_x and abs(xv) <= x_zero_tol:
+            xv = 0.0
+        if abs(yv) <= y_zero_tol:
+            yv = 0.0
+        x_anchor = "start" if i == 0 else "end" if i == 4 else "middle"
         parts.append(f'<line x1="{gx:.2f}" y1="{top}" x2="{gx:.2f}" y2="{top + plot_h}" stroke="#e7ebf1"/>')
         parts.append(f'<line x1="{left}" y1="{gy:.2f}" x2="{left + plot_w}" y2="{gy:.2f}" stroke="#e7ebf1"/>')
         parts.append(
-            f'<text x="{gx:.2f}" y="{top + plot_h + 18}" text-anchor="middle" '
+            f'<text x="{gx:.2f}" y="{top + plot_h + 18}" text-anchor="{x_anchor}" '
             f'class="plot-tick">{escape(_fmt(10 ** xv if log_x else xv))}</text>'
         )
         parts.append(
-            f'<text x="{left - 8}" y="{gy + 4:.2f}" text-anchor="end" '
+            f'<text x="{left - 12}" y="{gy + 4:.2f}" text-anchor="end" '
             f'class="plot-tick">{escape(_fmt(yv))}</text>'
         )
 
@@ -116,7 +126,7 @@ def line_chart(series, x_label, y_label, *, log_x=False, width=720, height=320):
         f'class="plot-axis-label">{escape(str(x_label))}</text>'
     )
     parts.append(
-        f'<text transform="translate(16,{top + plot_h / 2:.2f}) rotate(-90)" text-anchor="middle" '
+        f'<text transform="translate(18,{top + plot_h / 2:.2f}) rotate(-90)" text-anchor="middle" '
         f'class="plot-axis-label">{escape(str(y_label))}</text>'
     )
     parts.append("</svg>")

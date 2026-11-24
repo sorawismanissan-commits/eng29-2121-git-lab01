@@ -97,6 +97,12 @@ class NetlistTests(unittest.TestCase):
             build_netlist(request("all"))
         self.assertEqual(ctx.exception.kind, "validation_error")
 
+    def test_transient_netlist_keeps_input_and_output_nodes_distinct(self):
+        net = build_netlist(request("tran"))
+        self.assertIn("VIN 2 0 DC 0 AC 1 SIN(0 0.01 1000.0)", net)
+        self.assertIn("RL 7 0 10000.0", net)
+        self.assertIn("wrdata tran.csv v(2) v(7)", net)
+
 
 class DiscoveryTests(unittest.TestCase):
     def test_find_model_uses_env_file(self):
@@ -176,6 +182,14 @@ class ParserTests(unittest.TestCase):
         self.assertAlmostEqual(points[1]["time_ms"], 0.1, places=4)
         self.assertAlmostEqual(points[1]["vin_V"], 0.00628, places=4)
         self.assertAlmostEqual(points[1]["vout_V"], -0.00153, places=4)
+
+    def test_transient_series_do_not_collapse_to_same_waveform(self):
+        path = self.write("0 0 0 0\n0.0001 0.00628 0.0001 -0.0109\n")
+        points = parse_tran_csv(path)
+        vin, vout = points[1]["vin_V"], points[1]["vout_V"]
+        self.assertNotAlmostEqual(vin, vout, places=4)
+        self.assertGreater(abs(vout), abs(vin))
+        self.assertLess(vin * vout, 0)
 
     def test_empty_csv_is_parse_error(self):
         with self.assertRaises(SpiceError) as ctx:
