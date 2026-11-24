@@ -330,6 +330,11 @@ class SpiceTemplateTests(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()
 
+    def test_page_title_is_lab_04(self):
+        body = self.client.get("/").get_data(as_text=True)
+        self.assertIn("<title>Lab 04: BJT CE Amplifier Simulator</title>", body)
+        self.assertIn("<h1>Lab 04: BJT CE Amplifier Simulator</h1>", body)
+
     def test_divider_shows_spice_controls(self):
         body = self.client.get("/?mode=divider").get_data(as_text=True)
         self.assertIn('name="analysis"', body)
