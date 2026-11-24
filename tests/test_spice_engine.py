@@ -4,7 +4,16 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from spice_engine import SpiceError, SpiceRequest, build_netlist, find_model, find_ngspice
+from spice_engine import (
+    SpiceError,
+    SpiceRequest,
+    build_netlist,
+    find_model,
+    find_ngspice,
+    parse_ac_csv,
+    parse_op_csv,
+    parse_tran_csv,
+)
 
 
 def request(analysis="dc", **overrides):
@@ -88,3 +97,46 @@ class DiscoveryTests(unittest.TestCase):
     def test_find_ngspice_uses_env_override(self):
         with patch.dict(os.environ, {"NGSPICE_BIN": "C:/fake/ngspice_con.exe"}, clear=False):
             self.assertEqual(find_ngspice(), "C:/fake/ngspice_con.exe")
+
+
+class ParserTests(unittest.TestCase):
+    def write(self, text):
+        tmp = tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False, encoding="utf-8")
+        tmp.write(text)
+        tmp.close()
+        self.addCleanup(lambda: Path(tmp.name).unlink(missing_ok=True))
+        return Path(tmp.name)
+
+    def test_parse_op_csv(self):
+        path = self.write(
+            "12 1.95763218 12 1.23946122 12 9.29835416 "
+            "12 8.05889293 12 0.00122879744 12 0.0000114476286\n"
+        )
+        result = parse_op_csv(path)
+        self.assertAlmostEqual(result["vb_V"], 1.9576, places=4)
+        self.assertAlmostEqual(result["ve_V"], 1.2395, places=4)
+        self.assertAlmostEqual(result["vc_V"], 9.2984, places=4)
+        self.assertAlmostEqual(result["vce_V"], 8.0589, places=4)
+        self.assertAlmostEqual(result["ic_mA"], 1.2288, places=4)
+        self.assertAlmostEqual(result["ib_uA"], 11.4476, places=4)
+
+    def test_parse_ac_csv_converts_radians_to_degrees(self):
+        path = self.write("1000 1.74846117 1000 -3.13925692\n")
+        points = parse_ac_csv(path)
+        self.assertEqual(len(points), 1)
+        self.assertAlmostEqual(points[0]["freq_Hz"], 1000.0)
+        self.assertAlmostEqual(points[0]["gain_db"], 4.85, places=2)
+        self.assertAlmostEqual(points[0]["phase_deg"], -179.86, places=1)
+
+    def test_parse_tran_csv(self):
+        path = self.write("0 0 0 0\n0.0001 0.00628 0.0001 -0.00153\n")
+        points = parse_tran_csv(path)
+        self.assertEqual(len(points), 2)
+        self.assertAlmostEqual(points[1]["time_ms"], 0.1, places=4)
+        self.assertAlmostEqual(points[1]["vin_V"], 0.00628, places=4)
+        self.assertAlmostEqual(points[1]["vout_V"], -0.00153, places=4)
+
+    def test_empty_csv_is_parse_error(self):
+        with self.assertRaises(SpiceError) as ctx:
+            parse_tran_csv(self.write(""))
+        self.assertEqual(ctx.exception.kind, "parse_error")
