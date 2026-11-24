@@ -509,6 +509,152 @@
             color: #0369a1;
             line-height: 1.4;
         }
+
+        /* 🔬 SPICE section */
+        .spice-card {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 1.25rem;
+        }
+
+        .spice-body { padding: 1rem; }
+
+        .spice-controls {
+            margin: 0.75rem 0 0.4rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            background: #f8fafc;
+            padding: 0.55rem 0.7rem;
+        }
+
+        .spice-controls summary {
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #0f766e;
+        }
+
+        .spice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 0.45rem 1.1rem;
+            margin-top: 0.6rem;
+        }
+
+        .analysis-tabs {
+            display: flex;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+            margin: 0.6rem 0;
+        }
+
+        .analysis-tabs label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 999px;
+            padding: 0.28rem 0.65rem;
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: #334155;
+            background: #fff;
+            cursor: pointer;
+        }
+
+        .analysis-tabs input { accent-color: #0f766e; }
+
+        .btn-simulate {
+            background-color: #0f766e;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 0.55rem 1rem;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        .btn-simulate:hover { background-color: #115e59; }
+
+        .spice-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem 1.15rem;
+            font-size: 0.76rem;
+            color: #334155;
+            margin: 0.5rem 0 0.85rem;
+            list-style: none;
+        }
+
+        .spice-meta code { font-size: 0.72rem; }
+
+        .spice-tables {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .spice-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+        .spice-table th, .spice-table td {
+            border: 1px solid var(--border-color);
+            padding: 0.35rem 0.5rem;
+            text-align: left;
+        }
+        .spice-table th { background: #f8fafc; font-weight: 700; }
+        .spice-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+        .plot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1rem;
+        }
+
+        .plot-frame {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem;
+            background: #fff;
+        }
+
+        .plot-frame h4 { font-size: 0.8rem; margin-bottom: 0.35rem; color: #0f172a; }
+
+        .sim-plot .plot-tick { font-size: 10px; fill: #64748b; }
+        .sim-plot .plot-legend { font-size: 10px; fill: #334155; }
+        .sim-plot .plot-axis-label { font-size: 11px; fill: #0f172a; font-weight: 600; }
+        .plot-empty { font-size: 0.8rem; color: var(--text-muted); padding: 0.6rem; }
+
+        .spice-details {
+            margin-top: 0.8rem;
+            border-top: 1px solid var(--border-color);
+            padding-top: 0.6rem;
+        }
+
+        .spice-details details { margin-bottom: 0.4rem; }
+        .spice-details summary { cursor: pointer; font-size: 0.78rem; font-weight: 700; color: #0f766e; }
+        .spice-details pre {
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: 6px;
+            padding: 0.7rem;
+            font-size: 0.7rem;
+            overflow-x: auto;
+            margin-top: 0.4rem;
+        }
+
+        .provisional-note {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #92400e;
+            border-radius: 7px;
+            padding: 0.5rem 0.7rem;
+            font-size: 0.75rem;
+            margin: 0.5rem 0;
+        }
     </style>
 </head>
 <body>
@@ -627,11 +773,90 @@
                                 <span class="unit-select">V</span>
                             </div>
                         </div>
+
+                        {% if mode == 'divider' %}
+                        {% set sv = spice_values or values %}
+                        <details class="spice-controls">
+                            <summary><i class="fa-solid fa-sliders"></i> SPICE Settings</summary>
+                            <div class="spice-grid">
+                                <div class="form-row">
+                                    <label for="vin_amp_mv">Source amplitude</label>
+                                    <div class="input-group">
+                                        <input type="number" id="vin_amp_mv" name="vin_amp_mv" step="1" value="{{ sv.get('vin_amp_mv', '10') }}" required>
+                                        <span class="unit-select">mV</span>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <label for="vin_freq_hz">Source frequency</label>
+                                    <div class="input-group">
+                                        <input type="number" id="vin_freq_hz" name="vin_freq_hz" step="1" value="{{ sv.get('vin_freq_hz', '1000') }}" required>
+                                        <span class="unit-select">Hz</span>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <label for="ac_start_hz">AC start</label>
+                                    <div class="input-group">
+                                        <input type="number" id="ac_start_hz" name="ac_start_hz" step="1" value="{{ sv.get('ac_start_hz', '10') }}" required>
+                                        <span class="unit-select">Hz</span>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <label for="ac_stop_hz">AC stop</label>
+                                    <div class="input-group">
+                                        <input type="number" id="ac_stop_hz" name="ac_stop_hz" step="1" value="{{ sv.get('ac_stop_hz', '1000000') }}" required>
+                                        <span class="unit-select">Hz</span>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <label for="ac_ppd">AC points/decade</label>
+                                    <div class="input-group">
+                                        <input type="number" id="ac_ppd" name="ac_ppd" step="1" value="{{ sv.get('ac_ppd', '10') }}" required>
+                                        <span class="unit-select">–</span>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <label for="tran_stop_ms">Transient stop</label>
+                                    <div class="input-group">
+                                        <input type="number" id="tran_stop_ms" name="tran_stop_ms" step="0.1" value="{{ sv.get('tran_stop_ms', '5') }}" required>
+                                        <span class="unit-select">ms</span>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <label for="tran_step_us">Max step</label>
+                                    <div class="input-group">
+                                        <input type="number" id="tran_step_us" name="tran_step_us" step="1" value="{{ sv.get('tran_step_us', '10') }}" required>
+                                        <span class="unit-select">µs</span>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <label for="rl_kohm">Load resistor</label>
+                                    <div class="input-group">
+                                        <input type="number" id="rl_kohm" name="rl_kohm" step="0.1" value="{{ sv.get('rl_kohm', '10') }}" required>
+                                        <span class="unit-select">kΩ</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+
+                        <div class="analysis-tabs" role="radiogroup" aria-label="Analysis Mode">
+                            {% for key, label in [('dc', 'DC'), ('ac', 'AC'), ('tran', 'Transient')] %}
+                            <label>
+                                <input type="radio" name="analysis" value="{{ key }}"
+                                       {{ 'checked' if spice_analysis == key else '' }}> {{ label }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
 
                     <button type="submit" class="btn-calculate">
                         <i class="fa-solid fa-calculator"></i> Calculate DC Bias
                     </button>
+                    {% if mode == 'divider' %}
+                    <button type="submit" class="btn-simulate" formaction="{{ url_for('spice_form') }}">
+                        <i class="fa-solid fa-wave-square"></i> Run Simulation
+                    </button>
+                    {% endif %}
                 </form>
             </section>
 
@@ -799,6 +1024,144 @@
                 {% endif %}
             </section>
         </main>
+
+        <!-- SPICE Results (ngspice) -->
+        <section class="spice-card" id="spice-section">
+            <div class="card-header blue-tint">
+                <h2><i class="fa-solid fa-wave-square"></i> SPICE Results — CE Voltage Divider (ngspice 47)</h2>
+            </div>
+            <div class="spice-body">
+                {% if spice_error %}
+                <div class="badge-status badge-danger" id="spice-status-card">
+                    <div class="badge-title">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                        <span>SPICE Error — {{ spice_error.kind }}</span>
+                    </div>
+                    <div class="badge-body">
+                        {{ spice_error.message }}
+                        {% if spice_error.run_id %}<br>run_id: <code>{{ spice_error.run_id }}</code>{% endif %}
+                    </div>
+                </div>
+                <p class="mode-note">ผล Analytical ด้านบนยังใช้ได้; ไม่มีกราฟหรือค่าจากรันที่ล้มเหลว</p>
+
+                {% elif spice %}
+                <div class="badge-status badge-success" id="spice-status-card">
+                    <div class="badge-title">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>{{ spice.status }} — Analysis: {{ spice.analysis }}</span>
+                    </div>
+                    <div class="badge-body">รันด้วย {{ spice.engine }} จริง ไม่ได้คำนวณจากสมการ Analytical</div>
+                </div>
+                <ul class="spice-meta">
+                    <li>Engine: <strong>{{ spice.engine }}</strong></li>
+                    <li>Version: <strong>{{ spice.engine_version or 'ngspice-47' }}</strong></li>
+                    <li>run_id: <code id="spice-run-id">{{ spice.run_id }}</code></li>
+                    <li>Duration: <strong>{{ spice.duration_ms }} ms</strong></li>
+                    <li>Analysis: <strong>{{ spice.analysis }}</strong></li>
+                    <li>Model source: <strong id="spice-model">{{ spice.model_source }}</strong></li>
+                </ul>
+                <p class="validation-note"><strong>Model ที่ใช้:</strong> <code>{{ spice.model }}</code></p>
+                {% if spice.model_source == 'provisional' %}
+                <p class="provisional-note">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    provisional model — Starter Kit not found: ยังไม่ได้ใช้ model จากผู้สอน
+                    ค่าที่เห็นจึงเป็นผลของ generic NPN model (BF จากฟอร์ม, IS=1e-15, VAF=100)
+                </p>
+                {% endif %}
+                <p class="validation-note">
+                    <strong>Saved run:</strong>
+                    <code>instance/spice_runs/{{ spice.run_id }}/</code>
+                    (circuit.cir, request.json, meta.json, ngspice.log, CSV)
+                </p>
+
+                {% if spice.analysis == 'dc' and spice.dc %}
+                <div class="spice-tables">
+                    <table class="spice-table" id="spice-dc-table">
+                        <thead><tr><th>SPICE DC Operating Point</th><th>Value</th></tr></thead>
+                        <tbody>
+                            <tr><td>V<sub>B</sub></td><td class="num">{{ '%.4f'|format(spice.dc.vb_V) }} V</td></tr>
+                            <tr><td>V<sub>E</sub></td><td class="num">{{ '%.4f'|format(spice.dc.ve_V) }} V</td></tr>
+                            <tr><td>V<sub>C</sub></td><td class="num">{{ '%.4f'|format(spice.dc.vc_V) }} V</td></tr>
+                            <tr><td>V<sub>CE</sub></td><td class="num">{{ '%.4f'|format(spice.dc.vce_V) }} V</td></tr>
+                            <tr><td>I<sub>B</sub></td><td class="num">{{ '%.4f'|format(spice.dc.ib_uA) }} µA</td></tr>
+                            <tr><td>I<sub>C</sub></td><td class="num">{{ '%.4f'|format(spice.dc.ic_mA) }} mA</td></tr>
+                            <tr><td>I<sub>E</sub></td><td class="num">{{ '%.4f'|format(spice.dc.ie_mA) }} mA</td></tr>
+                        </tbody>
+                    </table>
+                    {% if result %}
+                    <table class="spice-table" id="spice-crosscheck-table">
+                        <thead>
+                            <tr><th>Cross-check</th><th>Analytical</th><th>SPICE</th><th>Δ</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for label, key, unit in [
+                                ('V<sub>B</sub>','vb_V','V'), ('V<sub>E</sub>','ve_V','V'),
+                                ('V<sub>C</sub>','vc_V','V'), ('V<sub>CE</sub>','vce_V','V'),
+                                ('I<sub>B</sub>','ib_uA','µA'), ('I<sub>C</sub>','ic_mA','mA'),
+                                ('I<sub>E</sub>','ie_mA','mA')] %}
+                            <tr>
+                                <td>{{ label|safe }}</td>
+                                <td class="num">{{ '%.4f'|format(result[key]) }} {{ unit }}</td>
+                                <td class="num">{{ '%.4f'|format(spice.dc[key]) }} {{ unit }}</td>
+                                <td class="num">{{ '%.4f'|format(spice.dc[key] - result[key]) }} {{ unit }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if spice.analysis == 'ac' %}
+                <div class="plot-grid" id="spice-ac-plot">
+                    <div class="plot-frame">
+                        <h4>Gain magnitude (dB)</h4>
+                        {{ spice.plots.magnitude|safe if spice.plots and spice.plots.magnitude else '<p class="plot-empty">ไม่มีข้อมูล</p>'|safe }}
+                    </div>
+                    <div class="plot-frame">
+                        <h4>Phase (degrees)</h4>
+                        {{ spice.plots.phase|safe if spice.plots and spice.plots.phase else '<p class="plot-empty">ไม่มีข้อมูล</p>'|safe }}
+                    </div>
+                </div>
+                {% if spice.ac %}
+                <p class="validation-note">
+                    ความถี่ที่สแกน: {{ spice.ac|length }} จุด — อ่านค่า gain/phase ได้จากกราฟด้านบน
+                </p>
+                {% endif %}
+                {% endif %}
+
+                {% if spice.analysis == 'tran' %}
+                <div class="plot-grid" id="spice-tran-plot">
+                    <div class="plot-frame">
+                        <h4>Input vs Output (V vs ms)</h4>
+                        {{ spice.plots.waveform|safe if spice.plots and spice.plots.waveform else '<p class="plot-empty">ไม่มีข้อมูล</p>'|safe }}
+                    </div>
+                </div>
+                <p class="validation-note">สัญญาณออกถูกขยายและกลับเฟสเมื่อเทียบกับสัญญาณเข้า (common-emitter)</p>
+                {% endif %}
+
+                <div class="spice-details">
+                    <details>
+                        <summary>Netlist (circuit.cir)</summary>
+                        <pre id="spice-netlist">{{ spice.netlist }}</pre>
+                    </details>
+                    <details>
+                        <summary>Engine log / warnings</summary>
+                        <pre>{{ spice.warnings|join('\n') if spice.warnings else '(no warnings)' }}</pre>
+                    </details>
+                </div>
+
+                {% else %}
+                <div class="badge-status badge-neutral" id="spice-status-card">
+                    <div class="badge-title">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span>Not run</span>
+                    </div>
+                    <div class="badge-body">เลือก Analysis Mode แล้วกดปุ่มจำลอง — รองรับเฉพาะ Voltage Divider Bias</div>
+                </div>
+                {% endif %}
+            </div>
+        </section>
 
         <!-- Browser Acceptance Validation (A1–A5) -->
         <section class="validation-card">

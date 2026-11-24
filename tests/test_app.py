@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from app import app, parse_spice_request
 from spice_engine import SpiceError
+from spice_plots import line_chart
 
 FORM = {
     "mode": "divider",
@@ -238,7 +239,7 @@ class SpiceRouteTests(unittest.TestCase):
         self.assertEqual(res.status_code, 400)
         body = res.get_data(as_text=True)
         self.assertIn("1.23", body)
-        self.assertNotIn("sim-plot", body)
+        self.assertNotIn('class="sim-plot"', body)
 
     def test_engine_error_returns_502(self):
         error = SpiceError("not_found", "ไม่พบ ngspice", run_id="run-1", artifacts={})
@@ -276,6 +277,117 @@ class SpiceRouteTests(unittest.TestCase):
         res = self.client.post("/api/spice", json={**SPICE_FORM, "analysis": "all"})
         self.assertEqual(res.status_code, 400)
         self.assertEqual(res.get_json()["status"], "Error")
+
+
+def fake_result(analysis):
+    if analysis == "ac":
+        points = [
+            {"freq_Hz": 10, "gain_db": -6.0, "phase_deg": -150.0},
+            {"freq_Hz": 1000, "gain_db": 4.85, "phase_deg": -179.86},
+        ]
+        return {
+            **FAKE_DC,
+            "analysis": "ac", "dc": None, "tran": None,
+            "ac": {"points": points, "gain_db_mid": 4.85, "phase_deg_mid": -179.86},
+            "plots": {
+                "magnitude": line_chart(
+                    [{"name": "Gain", "color": "#0c8e83",
+                      "points": [(p["freq_Hz"], p["gain_db"]) for p in points]}],
+                    "Frequency (Hz)", "Gain (dB)", log_x=True,
+                ),
+                "phase": line_chart(
+                    [{"name": "Phase", "color": "#c77a35",
+                      "points": [(p["freq_Hz"], p["phase_deg"]) for p in points]}],
+                    "Frequency (Hz)", "Phase (°)", log_x=True,
+                ),
+            },
+        }
+    if analysis == "tran":
+        points = [
+            {"time_ms": 0.0, "vin_V": 0.0, "vout_V": 0.0},
+            {"time_ms": 0.1, "vin_V": 0.00628, "vout_V": -0.0109},
+        ]
+        return {
+            **FAKE_DC,
+            "analysis": "tran", "dc": None, "ac": None,
+            "tran": points,
+            "plots": {
+                "waveform": line_chart(
+                    [
+                        {"name": "Vin", "color": "#8a94a6",
+                         "points": [(p["time_ms"], p["vin_V"]) for p in points]},
+                        {"name": "Vout", "color": "#c77a35",
+                         "points": [(p["time_ms"], p["vout_V"]) for p in points]},
+                    ],
+                    "Time (ms)", "Voltage (V)",
+                )
+            },
+        }
+    return FAKE_DC
+
+
+class SpiceTemplateTests(unittest.TestCase):
+    def setUp(self):
+        self.client = app.test_client()
+
+    def test_divider_shows_spice_controls(self):
+        body = self.client.get("/?mode=divider").get_data(as_text=True)
+        self.assertIn('name="analysis"', body)
+        for value in ("dc", "ac", "tran"):
+            self.assertIn(f'value="{value}"', body)
+        self.assertIn('name="vin_amp_mv"', body)
+        self.assertIn("Run Simulation", body)
+
+    def test_fixed_hides_spice_controls(self):
+        body = self.client.get("/?mode=fixed").get_data(as_text=True)
+        self.assertNotIn('name="analysis"', body)
+        self.assertNotIn("Run Simulation", body)
+
+    def test_not_run_shows_status(self):
+        body = self.client.get("/?mode=divider").get_data(as_text=True)
+        self.assertIn("spice-status-card", body)
+        self.assertIn("Not run", body)
+
+    def test_dc_result_shows_provenance_and_table(self):
+        with patch("app.run_ngspice", return_value=FAKE_DC):
+            res = self.client.post("/spice", data=SPICE_FORM)
+        body = res.get_data(as_text=True)
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("spice-dc-table", body)
+        self.assertIn(FAKE_DC["run_id"], body)
+        self.assertIn("provisional model", body)
+        self.assertIn("Analytical", body)
+        self.assertIn("Cross-check", body)
+        self.assertIn("instance/spice_runs/", body)
+
+    def test_ac_result_contains_svg_and_units(self):
+        with patch("app.run_ngspice", return_value=fake_result("ac")):
+            res = self.client.post("/spice", data={**SPICE_FORM, "analysis": "ac"})
+        body = res.get_data(as_text=True)
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('class="sim-plot"', body)
+        self.assertIn("spice-ac-plot", body)
+        self.assertIn("dB", body)
+        self.assertIn("Frequency", body)
+
+    def test_tran_result_contains_svg(self):
+        with patch("app.run_ngspice", return_value=fake_result("tran")):
+            res = self.client.post("/spice", data={**SPICE_FORM, "analysis": "tran"})
+        body = res.get_data(as_text=True)
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("spice-tran-plot", body)
+        self.assertIn('class="sim-plot"', body)
+        self.assertIn("Time (ms)", body)
+
+    def test_engine_error_hides_stale_plots(self):
+        error = SpiceError("not_found", "ไม่พบ ngspice", run_id="run-stale", artifacts={})
+        with patch("app.run_ngspice", side_effect=error):
+            res = self.client.post("/spice", data={**SPICE_FORM, "analysis": "ac"})
+        body = res.get_data(as_text=True)
+        self.assertEqual(res.status_code, 502)
+        self.assertIn("run-stale", body)
+        self.assertNotIn('class="sim-plot"', body)
+        self.assertIn("1.23", body)
 
 
 if __name__ == "__main__":

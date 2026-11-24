@@ -155,7 +155,8 @@ def _attach_plots(spice):
     """Build server-rendered SVG strings for the selected analysis."""
     plots = {}
     if spice.get("analysis") == "ac" and spice.get("ac"):
-        points = spice["ac"]
+        raw = spice["ac"]
+        points = raw["points"] if isinstance(raw, dict) else raw
         plots["magnitude"] = line_chart(
             [{"name": "Gain", "color": "#0c8e83",
               "points": [(p["freq_Hz"], p["gain_db"]) for p in points]}],
@@ -167,7 +168,8 @@ def _attach_plots(spice):
             "Frequency (Hz)", "Phase (°)", log_x=True,
         )
     elif spice.get("analysis") == "tran" and spice.get("tran"):
-        points = spice["tran"]
+        raw = spice["tran"]
+        points = raw["points"] if isinstance(raw, dict) else raw
         plots["waveform"] = line_chart(
             [
                 {"name": "Vin", "color": "#8a94a6",
