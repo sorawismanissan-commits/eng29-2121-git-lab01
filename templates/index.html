@@ -667,10 +667,10 @@
         }
 
         .sim-plot { height: auto !important; }
-        .sim-plot .plot-tick { font-size: 18px; fill: #475569; }
+        .sim-plot .plot-tick { font-size: 24px; fill: #475569; }
         .sim-plot .plot-legend { display: none; }
         .sim-plot line[stroke-width="2.2"] { display: none; }
-        .sim-plot .plot-axis-label { font-size: 20px; fill: #0f172a; font-weight: 600; }
+        .sim-plot .plot-axis-label { font-size: 26px; fill: #0f172a; font-weight: 600; }
         .plot-empty { font-size: 0.8rem; color: var(--text-muted); padding: 0.6rem; }
 
         .spice-details {
@@ -848,7 +848,7 @@
         }
 
         .plot-grid {
-            grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+            grid-template-columns: 1fr;
             gap: 0.75rem;
         }
 
@@ -1688,7 +1688,7 @@
                                 <td><strong>A5 · อินพุตผิด</strong></td>
                                 <td>Fixed · <var>R</var><sub>B</sub> = 0</td>
                                 <td>มีข้อความให้แก้ <var>R</var><sub>B</sub> (ต้องมากกว่า 0) เว็บไม่ล่ม และไม่แสดงผลเดิมเป็นผลของรอบนี้ (และมีการตรวจอินพุตใน Flask ด้วย)</td>
-                                <td><strong>HTTP 400</strong> · badge แดง "Calculation Error: Fixed Bias"<br>ข้อความ "RB ต้องมากกว่า 0" · ตารางผลแสดง "ไม่มีค่า" ทั้ง 7 ช่อง</td>
+                                <td><strong>HTTP 400</strong> · badge แดง "Calculation Error: Fixed Bias"<br>ข้อความ "RB ต้องมากกว่า 0" · ตารางผลแสดง "—" ทั้ง 7 ช่อง</td>
                                 <td>OpenCode Browser: เปิด <code>?mode=fixed</code> ใส่ <var>R</var><sub>B</sub> = 0 → Calculate → ตรวจ badge, ตาราง และ HTTP status</td>
                                 <td class="status-pass">PASS</td>
                             </tr>

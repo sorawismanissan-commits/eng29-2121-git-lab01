@@ -70,13 +70,33 @@ def _ac_summary(raw, source_freq_Hz):
     if source is None or source <= 0:
         at = min(points, key=lambda p: p["freq_Hz"])
     else:
-        at = min(points, key=lambda p: abs(log10(p["freq_Hz"] / source)))
+        positive = [p for p in points if p["freq_Hz"] > 0]
+        at = (min(positive, key=lambda p: abs(log10(p["freq_Hz"] / source)))
+              if positive else points[0])
 
     reference = max(p["gain_db"] for p in points)
     threshold = reference - 3.0
-    below = [p for p in points if p["gain_db"] <= threshold]
-    low = below[0]["freq_Hz"] if below else None
-    high = below[-1]["freq_Hz"] if below else None
+
+    # A cutoff is a crossing between adjacent sweep points, not merely a
+    # point below the threshold: a one-sided sweep has only one real edge.
+    epsilon = 1e-9 * max(1.0, abs(reference))
+
+    def side(gain_db):
+        delta = gain_db - threshold
+        if abs(delta) <= epsilon:
+            return 0
+        return 1 if delta > 0 else -1
+
+    crossings = []
+    for previous, current in zip(points, points[1:]):
+        before = side(previous["gain_db"])
+        after = side(current["gain_db"])
+        if before > 0 and after <= 0:
+            crossings.append(("high", current["freq_Hz"]))
+        elif before < 0 and after >= 0:
+            crossings.append(("low", current["freq_Hz"]))
+    low = next((freq for kind, freq in crossings if kind == "low"), None)
+    high = next((freq for kind, freq in crossings if kind == "high"), None)
     sweep_low = points[0]["freq_Hz"]
     sweep_high = points[-1]["freq_Hz"]
 
@@ -84,6 +104,8 @@ def _ac_summary(raw, source_freq_Hz):
         status = f"-3 dB points within sweep ({low:g} Hz and {high:g} Hz)"
     elif low is not None:
         status = f"-3 dB edge at {low:g} Hz; upper edge outside sweep"
+    elif high is not None:
+        status = f"-3 dB edge at {high:g} Hz; lower edge outside sweep"
     else:
         status = (
             f"No -3 dB point within sweep — outside sweep "
@@ -125,12 +147,8 @@ def _phasor(points, freq_hz):
         scc += c * c
         sss += s * s
         scs += c * s
-        if point.get("_series") == "out":
-            syc += value * c
-            sysum += value * s
-        else:
-            syc += value * c
-            sysum += value * s
+        syc += value * c
+        sysum += value * s
 
     det = scc * sss - scs * scs
     if abs(det) < 1e-12:
@@ -194,7 +212,12 @@ def _tran_summary(raw, source_freq_Hz):
 
 
 def build_summary(spice, result, source_freq_Hz):
-    """Return display-ready DC/AC/transient summaries plus engine provenance."""
+    """Return display-ready DC/AC/transient summaries plus engine provenance.
+
+    ``engine`` is part of the summary contract for consumers/tests; the
+    status box still reads the raw ``spice`` metadata so its provenance text
+    stays byte-identical to the earlier acceptance report.
+    """
     spice = spice or {}
     dc = _dc_rows(spice.get("dc"), result) if spice.get("dc") else None
     ac = _ac_summary(spice.get("ac"), source_freq_Hz)

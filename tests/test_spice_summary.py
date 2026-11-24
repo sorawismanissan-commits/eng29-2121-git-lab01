@@ -34,6 +34,39 @@ class SummaryTests(unittest.TestCase):
         self.assertIsNone(ac["cutoff_high_Hz"])
         self.assertIn("outside sweep", ac["cutoff_status"])
 
+    def test_ac_summary_reports_upper_edge_only(self):
+        points = [{"freq_Hz": 10, "gain_db": 4.85, "phase_deg": -180},
+                  {"freq_Hz": 1000, "gain_db": 4.85, "phase_deg": -180},
+                  {"freq_Hz": 10000, "gain_db": 1.85, "phase_deg": -180},
+                  {"freq_Hz": 100000, "gain_db": -3.15, "phase_deg": -180}]
+        ac = build_summary({"ac": points}, None, 1000.0)["ac"]
+        self.assertIsNone(ac["cutoff_low_Hz"])
+        self.assertEqual(ac["cutoff_high_Hz"], 10000)
+        self.assertIn("lower edge outside sweep", ac["cutoff_status"])
+
+    def test_ac_summary_reports_lower_edge_only(self):
+        points = [{"freq_Hz": 10, "gain_db": -3.15, "phase_deg": -180},
+                  {"freq_Hz": 100, "gain_db": 1.85, "phase_deg": -180},
+                  {"freq_Hz": 1000, "gain_db": 4.85, "phase_deg": -180},
+                  {"freq_Hz": 100000, "gain_db": 4.85, "phase_deg": -180}]
+        ac = build_summary({"ac": points}, None, 1000.0)["ac"]
+        self.assertEqual(ac["cutoff_low_Hz"], 100)
+        self.assertIsNone(ac["cutoff_high_Hz"])
+        self.assertIn("upper edge outside sweep", ac["cutoff_status"])
+
+    @staticmethod
+    def _sine_points(vin_phase_deg, vout_phase_deg):
+        points = []
+        for i in range(30):
+            time_ms = i * 0.1
+            angle = 2 * math.pi * 1000 * (time_ms / 1000)
+            points.append({
+                "time_ms": time_ms,
+                "vin_V": 0.01 * math.sin(angle + math.radians(vin_phase_deg)),
+                "vout_V": 0.0175 * math.sin(angle + math.radians(vout_phase_deg)),
+            })
+        return points
+
     def test_tran_summary_detects_inversion_with_wraparound(self):
         points = [{"time_ms": i * 0.1,
                    "vin_V": 0.01 * math.sin(2 * math.pi * 1000 * (i * 0.0001)),
@@ -43,6 +76,20 @@ class SummaryTests(unittest.TestCase):
         self.assertLess(abs(tran["gain"] - 1.75), 0.1)
         self.assertTrue(tran["inversion"])
         self.assertLess(abs(abs(tran["phase_diff_deg"]) - 180), 10)
+
+    def test_tran_summary_wraps_phase_across_plus_minus_180(self):
+        tran = build_summary(
+            {"tran": self._sine_points(179, -1)}, None, 1000.0
+        )["tran"]
+        self.assertTrue(tran["inversion"])
+        self.assertLess(abs(abs(tran["phase_diff_deg"]) - 180), 10)
+
+    def test_tran_summary_treats_both_phases_near_180_as_in_phase(self):
+        tran = build_summary(
+            {"tran": self._sine_points(179.94, -179.94)}, None, 1000.0
+        )["tran"]
+        self.assertFalse(tran["inversion"])
+        self.assertLess(abs(tran["phase_diff_deg"]), 5)
 
 
 if __name__ == "__main__":

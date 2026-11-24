@@ -88,7 +88,7 @@ All SPICE numbers are correct for the model actually used, but the app still use
 
 ## Dashboard refactor verification (2026-11-24)
 
-Scope: verification of the 3-column engineering-dashboard refactor (commits `be0a772` … `72b6016`). The A1–A5 and B1–B8 records above are unchanged and remain the acceptance baseline.
+Scope: verification of the 3-column engineering-dashboard refactor (commits `be0a772` … `d6e317c`, plus post-review fixes). The A1–A5 records and B1–B8 acceptance behavior remain the baseline. The pre-existing B4/B5 corrections above were deliberately retained — the refactor did not rewrite those historical findings.
 
 ### Baseline
 
@@ -115,7 +115,7 @@ All four runs used the unchanged model card `.model QNPN NPN (BF=100 IS=1e-15 VA
 | Grid | `369.8px 405.0px 352.2px` — Circuit & Parameters / Simulation & Plots / Engineering Results | `317px` — the three cards stack at the same x |
 | Header | `rgb(16, 54, 88)` (`#103658`), `CE Amplifier Lab`, `DC Bias / AC / Transient` | same navy header, stacked text |
 | Buttons | Calculate 44 px, Run Simulation 48 px; both full column width | Calculate 44 px, Run Simulation 48 px; both 283 px wide |
-| AC plots | 2 `svg.sim-plot` charts, each 162 px inside a 180 px frame | 2 charts, each 265 px inside a 283 px frame; SVG right edge 320 < frame right edge 329 |
+| AC plots (as validated) | 2 `svg.sim-plot` charts stacked, each 353 px inside a 371 px frame | 2 charts stacked, each 265 px inside a 283 px frame; no tick outside the SVG viewBox |
 | Fixed / emitter forms | `name="rb"` present, no Run Simulation button | same; no horizontal overflow |
 
 Chart-label fixes observed in the live SVG DOM: the transient zero tick now renders as `0` (not `-0.0000`) at `x=100.00, text-anchor=start`; the rightmost AC tick `1e+06` is at `x=672.00, text-anchor=end`; Y ticks sit at `x=88` while the rotated `Voltage (V)` / `Gain (dB)` title sits at `translate(18, …) rotate(-90)`, so the title no longer overlaps the tick text. Plot counts matched the selected analysis (DC 0, AC 2, transient 1).
@@ -125,3 +125,26 @@ Chart-label fixes observed in the live SVG DOM: the transient zero tick now rend
 - Desktop: `docs/captures/refactor-desktop-divider.png`, `refactor-desktop-dc.png`, `refactor-desktop-ac.png`, `refactor-desktop-tran.png`
 - Mobile: `docs/captures/refactor-mobile-divider.png`, `refactor-mobile-fixed.png`, `refactor-mobile-emitter.png`, `refactor-mobile-ac.png`
 - Verification used DOM/geometry measurements and saved artifacts; the PNGs are retained for human visual review. The provisional-model limitation from the B-table still applies.
+
+---
+
+## Post-review fixes and re-verification (2026-11-24)
+
+A read-only code review of `bcbce9b..d6e317c` produced one Important and several Minor findings. The corrections below were implemented and verified; no simulation engine, parser, netlist line, route, form field name, or analytical formula was changed.
+
+### Fixes
+
+- **`templates/index.html`** — the two Bode charts in the center column now stack (`.plot-grid { grid-template-columns: 1fr; }`) instead of shrinking to ~162 px in a two-up desktop grid. Axis text was enlarged to `24px` ticks / `26px` axis titles in SVG user units. The historical A7 acceptance text now shows the current `—` empty-cell glyph instead of the stale `ไม่มีค่า`.
+- **`spice_summary.py`** — `-3 dB` cutoff detection now uses sign crossings between adjacent sweep points with a tolerance, so a sweep with only one edge no longer reports two boundaries. `log10` is called only for positive frequencies; a docstring note records that `engine` stays in the summary contract while the status box continues to read raw `spice` metadata so its provenance wording stays byte-identical. Redundant `_phasor` branches were removed.
+- **`tests/test_spice_summary.py`** — added characterization tests for upper-edge-only and lower-edge-only sweeps and for phase behavior at the ±180° wrap: a true 180° inversion is detected, while two fitted phases of +179.94° and −179.94° are correctly treated as in phase. The reviewer's phase-wrap concern was verified against the math and rejected as a change; its behavior is now pinned by tests instead.
+- **`tests/test_app.py`** — added a template regression test for the stacked plot grid and the larger axis fonts.
+- **`app.py`** — no functional change. The review noted that fields for an unselected analysis are filled with form defaults during validation; this behavior predates the refactor and is required so a DC run does not need AC/transient inputs. It was left intact.
+
+### Fresh evidence
+
+- `.\venv\Scripts\python.exe -m unittest discover -s tests -v` → **Ran 88 tests, OK** (0 failures, 0 errors; full output in `.superpowers/sdd/2026-11-24-3column-dashboard/final-tests.log`).
+- `GET http://127.0.0.1:5000/` → **HTTP 200**, page length 62061.
+- Desktop 1280×886 AC run `20261124-193429-c4438298` and transient run `20261124-193451-7522e877`: `.plot-grid` resolves to a single `371.016px` column; each SVG is 353 px wide; effective CSS font sizes measure **11.8 px** for ticks and **12.7 px** for axis titles; `scrollWidth = clientWidth = 1265`.
+- Mobile 390×844 AC run `20261124-193402-7363798c`: plot column 283 px, each SVG 265 px, `scrollWidth = clientWidth = 375`; the AC summary still reads 4.85 dB / −179.9° / 51 points / no −3 dB point in sweep.
+- Across the final AC and transient SVGs, no tick's bounding box falls outside the 720-unit viewBox (`worstLeft = 5.2` for the transient zero tick, `worstRight = 673.3` for the rightmost Bode tick). The transient summary still reports Vin 10.00 mV, Vout 17.49 mV, gain 1.749×, phase −179.9°, with inversion detected.
+- Refreshed screenshots: `docs/captures/refactor-desktop-ac.png`, `refactor-desktop-tran.png`, `refactor-mobile-ac.png` (the other five refactor captures are unchanged). As before, verification relied on live DOM geometry and saved artifacts; this model cannot visually ingest the PNGs, so they remain for human review.

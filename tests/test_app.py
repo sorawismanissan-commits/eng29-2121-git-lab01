@@ -444,6 +444,12 @@ class SpiceTemplateTests(unittest.TestCase):
         self.assertIn("#103658", html)
         self.assertIn("CE Amplifier Lab", html)
 
+    def test_plot_cards_stack_with_legible_axis_text(self):
+        html = self.client.get("/?mode=divider").get_data(as_text=True)
+        self.assertRegex(html, r"\.plot-grid\s*\{\s*grid-template-columns:\s*1fr;")
+        self.assertRegex(html, r"\.sim-plot \.plot-tick\s*\{\s*font-size:\s*24px;")
+        self.assertRegex(html, r"\.sim-plot \.plot-axis-label\s*\{\s*font-size:\s*26px;")
+
     def test_fixed_and_emitter_modes_keep_lab3_form(self):
         for mode in ("fixed", "emitter"):
             html = self.client.get("/?mode=" + mode).get_data(as_text=True)
