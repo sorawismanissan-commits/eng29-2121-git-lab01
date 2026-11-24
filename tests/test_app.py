@@ -1,3 +1,4 @@
+import re
 import unittest
 from unittest.mock import patch
 
@@ -201,15 +202,22 @@ class SpiceValidationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_spice_request({**SPICE_FORM, "vin_freq_hz": "0"})
 
-    def test_rejects_bad_ac_range_and_ppd(self):
+    def test_ac_settings_are_validated_only_for_ac(self):
         with self.assertRaises(ValueError):
-            parse_spice_request({**SPICE_FORM, "ac_stop_hz": "10"})
+            parse_spice_request({**SPICE_FORM, "analysis": "ac", "ac_stop_hz": "10"})
         with self.assertRaises(ValueError):
-            parse_spice_request({**SPICE_FORM, "ac_ppd": "101"})
+            parse_spice_request({**SPICE_FORM, "analysis": "ac", "ac_ppd": "101"})
+        req = parse_spice_request({**SPICE_FORM, "ac_stop_hz": "", "ac_ppd": "nope"})
+        self.assertEqual(req.analysis, "dc")
+        self.assertAlmostEqual(req.ac_stop_Hz, 1_000_000.0)
+        self.assertEqual(req.ac_ppd, 10)
 
-    def test_rejects_bad_transient_range(self):
+    def test_transient_settings_are_validated_only_for_tran(self):
         with self.assertRaises(ValueError):
-            parse_spice_request({**SPICE_FORM, "tran_step_us": "5000"})
+            parse_spice_request({**SPICE_FORM, "analysis": "tran", "tran_step_us": "5000"})
+        req = parse_spice_request({**SPICE_FORM, "tran_stop_ms": "", "tran_step_us": "nope"})
+        self.assertAlmostEqual(req.tran_stop_s, 0.005)
+        self.assertAlmostEqual(req.tran_step_s, 0.00001)
 
 
 class SpiceRouteTests(unittest.TestCase):
@@ -334,6 +342,11 @@ class SpiceTemplateTests(unittest.TestCase):
         body = self.client.get("/").get_data(as_text=True)
         self.assertIn("<title>Lab 04: BJT CE Amplifier Simulator</title>", body)
         self.assertIn("<h1>Lab 04: BJT CE Amplifier Simulator</h1>", body)
+        self.assertIn('<html lang="th">', body)
+        self.assertIn('rel="icon"', body)
+        self.assertIn('id="sim-loading"', body)
+        self.assertIn("data-error-focus", body)
+        self.assertIn('tabindex="-1"', body)
 
     def test_divider_shows_spice_controls(self):
         body = self.client.get("/?mode=divider").get_data(as_text=True)
@@ -342,6 +355,12 @@ class SpiceTemplateTests(unittest.TestCase):
             self.assertIn(f'value="{value}"', body)
         self.assertIn('name="vin_amp_mv"', body)
         self.assertIn("Run Simulation", body)
+        calculate = re.search(r'<button[^>]+btn-calculate"[^>]*>', body).group(0)
+        self.assertIn("formnovalidate", calculate)
+        ac_start = re.search(r'<input[^>]+name="ac_start_hz"[^>]*>', body).group(0)
+        self.assertNotIn("required", ac_start)
+        tran_start = re.search(r'<input[^>]+name="tran_stop_ms"[^>]*>', body).group(0)
+        self.assertNotIn("required", tran_start)
 
     def test_fixed_hides_spice_controls(self):
         body = self.client.get("/?mode=fixed").get_data(as_text=True)
@@ -361,6 +380,8 @@ class SpiceTemplateTests(unittest.TestCase):
         self.assertIn("spice-dc-table", body)
         self.assertIn(FAKE_DC["run_id"], body)
         self.assertIn("provisional model", body)
+        self.assertIn("Provisional หมายถึง", body)
+        self.assertLessEqual(body.count("—"), 7)
         self.assertIn("Analytical", body)
         self.assertIn("Cross-check", body)
         self.assertIn("instance/spice_runs/", body)
@@ -371,6 +392,8 @@ class SpiceTemplateTests(unittest.TestCase):
         body = res.get_data(as_text=True)
         self.assertEqual(res.status_code, 200)
         self.assertIn('class="sim-plot"', body)
+        self.assertIn('aria-label="Gain (dB) versus Frequency (Hz); series: Gain"', body)
+        self.assertNotIn('height="auto"', body)
         self.assertIn("spice-ac-plot", body)
         self.assertIn("dB", body)
         self.assertIn("Frequency", body)
@@ -403,6 +426,14 @@ class SpiceTemplateTests(unittest.TestCase):
         self.assertIn("run-stale", body)
         self.assertNotIn('class="sim-plot"', body)
         self.assertIn("1.23", body)
+
+    def test_spice_template_receives_summary(self):
+        with patch("app.run_ngspice", return_value=FAKE_DC):
+            res = self.client.post("/spice", data=SPICE_FORM)
+        self.assertEqual(res.status_code, 200)
+        body = res.get_data(as_text=True)
+        self.assertIn("Engine: ngspice", body)
+        self.assertIn("DC Operating Point", body)
 
 
 if __name__ == "__main__":

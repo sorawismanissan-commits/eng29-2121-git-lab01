@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:,">
     <title>Lab 04: BJT CE Amplifier Simulator</title>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -16,10 +17,10 @@
             --text-muted: #64748b;
             --blue-header-bg: #e0f2fe;
             --blue-header-text: #0284c7;
-            --btn-bg: #008ba3;
-            --btn-hover: #007387;
+            --btn-bg: #007f91;
+            --btn-hover: #006b7d;
             --badge-green-bg: #dcfce7;
-            --badge-green-text: #15803d;
+            --badge-green-text: #166534;
             --badge-green-border: #86efac;
         }
 
@@ -161,7 +162,7 @@
             height: 100%;
         }
 
-        /* 🧭 Mode Selector (links — no JavaScript) */
+        /* 🧭 Mode Selector (links, no JavaScript) */
         .mode-tabs {
             display: flex;
             gap: 0.4rem;
@@ -170,7 +171,10 @@
         }
 
         .mode-tabs a {
-            padding: 0.3rem 0.65rem;
+            display: inline-flex;
+            align-items: center;
+            min-height: 44px;
+            padding: 0.55rem 0.85rem;
             border: 1px solid #cbd5e1;
             border-radius: 999px;
             font-size: 0.75rem;
@@ -192,7 +196,7 @@
         }
 
         .mode-note {
-            font-size: 0.72rem;
+            font-size: 0.82rem;
             color: var(--text-muted);
             margin-bottom: 0.75rem;
             line-height: 1.4;
@@ -233,6 +237,7 @@
 
         .input-group input {
             width: 68px;
+            height: 44px;
             border: none;
             padding: 0.3rem 0.5rem;
             font-size: 0.85rem;
@@ -246,6 +251,7 @@
             font-size: 0.75rem;
             color: #475569;
             padding: 0.3rem 0.4rem;
+            height: 44px;
             border-left: 1px solid #e2e8f0;
             background: #f8fafc;
             min-width: 36px;
@@ -254,7 +260,6 @@
             border-right: none;
             border-top: none;
             border-bottom: none;
-            cursor: pointer;
         }
 
         .btn-calculate {
@@ -263,6 +268,7 @@
             border: none;
             border-radius: 6px;
             width: 100%;
+            min-height: 44px;
             padding: 0.65rem;
             font-weight: 700;
             font-size: 0.9rem;
@@ -460,7 +466,7 @@
         }
 
         .validation-table td.status-pass {
-            color: #15803d;
+            color: #166534;
             font-weight: 700;
         }
 
@@ -475,7 +481,7 @@
         }
 
         .validation-footnote {
-            font-size: 0.72rem;
+            font-size: 0.82rem;
             color: var(--text-muted);
             margin-top: 0.55rem;
         }
@@ -492,7 +498,7 @@
         }
 
         .goal-tag {
-            background-color: #0284c7;
+            background-color: #0369a1;
             color: #ffffff;
             font-weight: 700;
             font-size: 0.75rem;
@@ -542,6 +548,21 @@
             margin-top: 0.6rem;
         }
 
+        .spice-group-label {
+            grid-column: 1 / -1;
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: #0f766e;
+            margin-top: 0.25rem;
+        }
+
+        .spice-hint {
+            font-size: 0.78rem;
+            color: #475569;
+            margin: 0.4rem 0 0;
+            line-height: 1.4;
+        }
+
         .analysis-tabs {
             display: flex;
             gap: 0.35rem;
@@ -553,9 +574,10 @@
             display: inline-flex;
             align-items: center;
             gap: 0.3rem;
+            min-height: 44px;
             border: 1px solid #cbd5e1;
             border-radius: 999px;
-            padding: 0.28rem 0.65rem;
+            padding: 0.55rem 0.85rem;
             font-size: 0.76rem;
             font-weight: 600;
             color: #334155;
@@ -570,12 +592,14 @@
             color: white;
             border: none;
             border-radius: 6px;
+            min-height: 44px;
             padding: 0.55rem 1rem;
             font-weight: 700;
             font-size: 0.85rem;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 0.45rem;
         }
 
@@ -621,11 +645,32 @@
             background: #fff;
         }
 
-        .plot-frame h4 { font-size: 0.8rem; margin-bottom: 0.35rem; color: #0f172a; }
+        .plot-frame h3 { font-size: 0.8rem; margin-bottom: 0.35rem; color: #0f172a; }
 
-        .sim-plot .plot-tick { font-size: 10px; fill: #64748b; }
-        .sim-plot .plot-legend { font-size: 10px; fill: #334155; }
-        .sim-plot .plot-axis-label { font-size: 11px; fill: #0f172a; font-weight: 600; }
+        .plot-legend-html {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem 0.9rem;
+            font-size: 0.8rem;
+            color: #334155;
+            margin-bottom: 0.4rem;
+        }
+
+        .legend-swatch {
+            display: inline-block;
+            width: 18px;
+            height: 3px;
+            border-radius: 2px;
+            background: var(--legend-color, #0c8e83);
+            vertical-align: middle;
+            margin-right: 0.4rem;
+        }
+
+        .sim-plot { height: auto !important; }
+        .sim-plot .plot-tick { font-size: 18px; fill: #475569; }
+        .sim-plot .plot-legend { display: none; }
+        .sim-plot line[stroke-width="2.2"] { display: none; }
+        .sim-plot .plot-axis-label { font-size: 20px; fill: #0f172a; font-weight: 600; }
         .plot-empty { font-size: 0.8rem; color: var(--text-muted); padding: 0.6rem; }
 
         .spice-details {
@@ -654,6 +699,68 @@
             padding: 0.5rem 0.7rem;
             font-size: 0.75rem;
             margin: 0.5rem 0;
+        }
+
+        .field-group {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem 0.8rem 0.35rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .field-group legend {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #0f766e;
+            padding: 0 0.35rem;
+        }
+
+        .form-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 0.6rem;
+        }
+
+        .form-actions .btn-calculate { margin-top: 0; }
+
+        [hidden] { display: none !important; }
+
+        #sim-loading { margin-top: 0.6rem; }
+
+        .provisional-gloss {
+            display: block;
+            font-size: 0.72rem;
+            color: #92400e;
+            margin-top: 0.15rem;
+        }
+
+        a:focus-visible,
+        button:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        summary:focus-visible {
+            outline: 3px solid #0369a1;
+            outline-offset: 2px;
+        }
+
+        @media (max-width: 520px) {
+            body { padding: 1rem 0.6rem; }
+            .app-wrapper { padding: 1rem; }
+            .main-header { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+            .header-left { gap: 0.7rem; }
+            .header-left h1 { font-size: 1.25rem; }
+            .icon-box { width: 2.8rem; height: 2.8rem; font-size: 1.5rem; }
+            .course-badge { align-self: stretch; justify-content: flex-start; font-size: 0.72rem; }
+            .course-badge i { font-size: 1.1rem; }
+            .grid-container > .card:has(.form-actions) { overflow: visible; }
+            .form-actions {
+                position: sticky;
+                bottom: 0;
+                z-index: 5;
+                background: linear-gradient(to top, #ffffff 72%, rgba(255, 255, 255, 0));
+                padding-top: 0.5rem;
+            }
         }
     </style>
 </head>
@@ -700,9 +807,12 @@
                         </div>
                         <input type="hidden" name="mode" value="{{ mode }}">
                         <p class="mode-note">
-                            โหมดที่เลือก: <strong>{{ mode_label }}</strong> — แสดงเฉพาะพารามิเตอร์ที่วงจรนี้ใช้
-                            (ความต้านทานกรอกเป็น kΩ)
+                            โหมดที่เลือก: <strong>{{ mode_label }}</strong>: แสดงพารามิเตอร์ของวงจรนี้
+                            (ความต้านทานกรอกเป็น kΩ); SPICE settings ใช้เฉพาะ Voltage Divider Bias
                         </p>
+
+                        <fieldset class="field-group">
+                            <legend>DC Bias Parameters</legend>
 
                         <div class="form-row">
                             <label for="vcc"><i>V</i><sub>CC</sub> <small>(Supply Voltage)</small></label>
@@ -773,12 +883,16 @@
                                 <span class="unit-select">V</span>
                             </div>
                         </div>
+                        </fieldset>
 
                         {% if mode == 'divider' %}
                         {% set sv = spice_values or values %}
+                        <fieldset class="field-group simulation-group">
+                            <legend>Simulation Parameters</legend>
                         <details class="spice-controls">
                             <summary><i class="fa-solid fa-sliders"></i> SPICE Settings</summary>
                             <div class="spice-grid">
+                                <p class="spice-group-label">Source settings</p>
                                 <div class="form-row">
                                     <label for="vin_amp_mv">Source amplitude</label>
                                     <div class="input-group">
@@ -793,38 +907,40 @@
                                         <span class="unit-select">Hz</span>
                                     </div>
                                 </div>
+                                <p class="spice-group-label">AC sweep settings</p>
                                 <div class="form-row">
                                     <label for="ac_start_hz">AC start</label>
                                     <div class="input-group">
-                                        <input type="number" id="ac_start_hz" name="ac_start_hz" step="1" value="{{ sv.get('ac_start_hz', '10') }}" required>
+                                        <input type="number" id="ac_start_hz" name="ac_start_hz" step="1" value="{{ sv.get('ac_start_hz', '10') }}">
                                         <span class="unit-select">Hz</span>
                                     </div>
                                 </div>
                                 <div class="form-row">
                                     <label for="ac_stop_hz">AC stop</label>
                                     <div class="input-group">
-                                        <input type="number" id="ac_stop_hz" name="ac_stop_hz" step="1" value="{{ sv.get('ac_stop_hz', '1000000') }}" required>
+                                        <input type="number" id="ac_stop_hz" name="ac_stop_hz" step="1" value="{{ sv.get('ac_stop_hz', '1000000') }}">
                                         <span class="unit-select">Hz</span>
                                     </div>
                                 </div>
                                 <div class="form-row">
                                     <label for="ac_ppd">AC points/decade</label>
                                     <div class="input-group">
-                                        <input type="number" id="ac_ppd" name="ac_ppd" step="1" value="{{ sv.get('ac_ppd', '10') }}" required>
+                                        <input type="number" id="ac_ppd" name="ac_ppd" step="1" value="{{ sv.get('ac_ppd', '10') }}">
                                         <span class="unit-select">–</span>
                                     </div>
                                 </div>
+                                <p class="spice-group-label">Transient settings</p>
                                 <div class="form-row">
                                     <label for="tran_stop_ms">Transient stop</label>
                                     <div class="input-group">
-                                        <input type="number" id="tran_stop_ms" name="tran_stop_ms" step="0.1" value="{{ sv.get('tran_stop_ms', '5') }}" required>
+                                        <input type="number" id="tran_stop_ms" name="tran_stop_ms" step="0.1" value="{{ sv.get('tran_stop_ms', '5') }}">
                                         <span class="unit-select">ms</span>
                                     </div>
                                 </div>
                                 <div class="form-row">
                                     <label for="tran_step_us">Max step</label>
                                     <div class="input-group">
-                                        <input type="number" id="tran_step_us" name="tran_step_us" step="1" value="{{ sv.get('tran_step_us', '10') }}" required>
+                                        <input type="number" id="tran_step_us" name="tran_step_us" step="1" value="{{ sv.get('tran_step_us', '10') }}">
                                         <span class="unit-select">µs</span>
                                     </div>
                                 </div>
@@ -838,6 +954,8 @@
                             </div>
                         </details>
 
+                        <p class="spice-hint">หากแก้ค่า AC/Transient ให้ตรวจช่วงความถี่และ Max step ให้สอดคล้องกับ Analysis Mode ที่เลือกก่อนกด Run Simulation</p>
+
                         <div class="analysis-tabs" role="radiogroup" aria-label="Analysis Mode">
                             {% for key, label in [('dc', 'DC'), ('ac', 'AC'), ('tran', 'Transient')] %}
                             <label>
@@ -846,17 +964,27 @@
                             </label>
                             {% endfor %}
                         </div>
+                        </fieldset>
                         {% endif %}
                     </div>
 
-                    <button type="submit" class="btn-calculate">
-                        <i class="fa-solid fa-calculator"></i> Calculate DC Bias
-                    </button>
-                    {% if mode == 'divider' %}
-                    <button type="submit" class="btn-simulate" formaction="{{ url_for('spice_form') }}">
-                        <i class="fa-solid fa-wave-square"></i> Run Simulation
-                    </button>
-                    {% endif %}
+                    <div id="sim-loading" class="badge-status badge-neutral" role="status" aria-live="polite" hidden>
+                        <div class="badge-title">
+                            <i class="fa-solid fa-spinner fa-spin"></i>
+                            <span data-loading-text>กำลังคำนวณ...</span>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-calculate" formnovalidate>
+                            <i class="fa-solid fa-calculator"></i> Calculate DC Bias
+                        </button>
+                        {% if mode == 'divider' %}
+                        <button type="submit" class="btn-simulate" formaction="{{ url_for('spice_form') }}">
+                            <i class="fa-solid fa-wave-square"></i> Run Simulation
+                        </button>
+                        {% endif %}
+                    </div>
                 </form>
             </section>
 
@@ -943,7 +1071,7 @@
             <section class="card col-results">
                 <div>
                     <div class="card-header green-tint">
-                        <h2><i class="fa-solid fa-chart-simple"></i> DC Bias Results — {{ mode_label }}</h2>
+                        <h2><i class="fa-solid fa-chart-simple"></i> DC Bias Results: {{ mode_label }}</h2>
                     </div>
                     
                     <table class="results-table">
@@ -982,42 +1110,42 @@
 
                 <!-- Status Card: colour/heading driven by `region`, errors by `error` -->
                 {% if result and result.region == 'Active' %}
-                <div class="badge-status badge-success" id="status-card">
+                <div class="badge-status badge-success" id="status-card" role="status" aria-live="polite" tabindex="-1">
                     <div class="badge-title">
                         <i class="fa-solid fa-circle-check"></i>
-                        <span>Active region — {{ mode_label }}</span>
+                        <span>Active region: {{ mode_label }}</span>
                     </div>
                     <div class="badge-body" id="badge-desc-text">{{ result.message }}</div>
                 </div>
                 {% elif result and result.region == 'Saturation' %}
-                <div class="badge-status badge-warning" id="status-card">
+                <div class="badge-status badge-warning" id="status-card" role="status" aria-live="polite" tabindex="-1">
                     <div class="badge-title">
                         <i class="fa-solid fa-triangle-exclamation"></i>
-                        <span>Saturation — {{ mode_label }}</span>
+                        <span>Saturation: {{ mode_label }}</span>
                     </div>
                     <div class="badge-body" id="badge-desc-text">{{ result.message }}</div>
                 </div>
                 {% elif result and result.region == 'Cutoff' %}
-                <div class="badge-status badge-danger" id="status-card">
+                <div class="badge-status badge-danger" id="status-card" role="status" aria-live="polite" data-error-focus tabindex="-1">
                     <div class="badge-title">
                         <i class="fa-solid fa-circle-xmark"></i>
-                        <span>Cutoff — {{ mode_label }}</span>
+                        <span>Cutoff: {{ mode_label }}</span>
                     </div>
                     <div class="badge-body" id="badge-desc-text">{{ result.message }}</div>
                 </div>
                 {% elif error %}
-                <div class="badge-status badge-danger" id="status-card">
+                <div class="badge-status badge-danger" id="status-card" role="status" aria-live="polite" data-error-focus tabindex="-1">
                     <div class="badge-title">
                         <i class="fa-solid fa-circle-xmark"></i>
-                        <span>Calculation Error — {{ mode_label }}</span>
+                        <span>Calculation Error: {{ mode_label }}</span>
                     </div>
                     <div class="badge-body" id="badge-desc-text">{{ error }}</div>
                 </div>
                 {% else %}
-                <div class="badge-status badge-neutral" id="status-card">
+                <div class="badge-status badge-neutral" id="status-card" role="status" aria-live="polite" tabindex="-1">
                     <div class="badge-title">
                         <i class="fa-solid fa-circle-info"></i>
-                        <span>ยังไม่มีผลลัพธ์ — {{ mode_label }}</span>
+                        <span>ยังไม่มีผลลัพธ์: {{ mode_label }}</span>
                     </div>
                     <div class="badge-body" id="badge-desc-text">กรอกพารามิเตอร์แล้วกด Calculate DC Bias</div>
                 </div>
@@ -1028,27 +1156,33 @@
         <!-- SPICE Results (ngspice) -->
         <section class="spice-card" id="spice-section">
             <div class="card-header blue-tint">
-                <h2><i class="fa-solid fa-wave-square"></i> SPICE Results — CE Voltage Divider (ngspice 47)</h2>
+                <h2><i class="fa-solid fa-wave-square"></i> SPICE Results: CE Voltage Divider (ngspice 47)</h2>
             </div>
             <div class="spice-body">
+                {% if spice_summary and spice_summary.engine %}
+                <section class="dashboard-summary-preview" aria-label="Engineering results preview">
+                    <h3>DC Operating Point</h3>
+                    <p>Engine: {{ spice_summary.engine.name or 'ngspice' }}</p>
+                </section>
+                {% endif %}
                 {% if spice_error %}
-                <div class="badge-status badge-danger" id="spice-status-card">
+                <div class="badge-status badge-danger" id="spice-status-card" role="status" aria-live="polite" data-error-focus tabindex="-1">
                     <div class="badge-title">
                         <i class="fa-solid fa-circle-xmark"></i>
-                        <span>SPICE Error — {{ spice_error.kind }}</span>
+                        <span>SPICE Error: {{ spice_error.kind|default('Invalid setting', true) }}</span>
                     </div>
                     <div class="badge-body">
-                        {{ spice_error.message }}
+                        {{ spice_error.message|default(spice_error, true) }}
                         {% if spice_error.run_id %}<br>run_id: <code>{{ spice_error.run_id }}</code>{% endif %}
                     </div>
                 </div>
                 <p class="mode-note">ผล Analytical ด้านบนยังใช้ได้; ไม่มีกราฟหรือค่าจากรันที่ล้มเหลว</p>
 
                 {% elif spice %}
-                <div class="badge-status badge-success" id="spice-status-card">
+                <div class="badge-status badge-success" id="spice-status-card" role="status" aria-live="polite" tabindex="-1">
                     <div class="badge-title">
                         <i class="fa-solid fa-circle-check"></i>
-                        <span>{{ spice.status }} — Analysis: {{ spice.analysis }}</span>
+                        <span>{{ spice.status }} | Analysis: {{ spice.analysis }}</span>
                     </div>
                     <div class="badge-body">รันด้วย {{ spice.engine }} จริง ไม่ได้คำนวณจากสมการ Analytical</div>
                 </div>
@@ -1058,13 +1192,15 @@
                     <li>run_id: <code id="spice-run-id">{{ spice.run_id }}</code></li>
                     <li>Duration: <strong>{{ spice.duration_ms }} ms</strong></li>
                     <li>Analysis: <strong>{{ spice.analysis }}</strong></li>
-                    <li>Model source: <strong id="spice-model">{{ spice.model_source }}</strong></li>
+                    <li>Model source: <strong id="spice-model">{{ spice.model_source }}</strong>
+                        <span class="provisional-gloss">Provisional หมายถึงแบบจำลองทั่วไป ยังไม่ใช่ model จากผู้สอน</span>
+                    </li>
                 </ul>
                 <p class="validation-note"><strong>Model ที่ใช้:</strong> <code>{{ spice.model }}</code></p>
                 {% if spice.model_source == 'provisional' %}
                 <p class="provisional-note">
                     <i class="fa-solid fa-triangle-exclamation"></i>
-                    provisional model — Starter Kit not found: ยังไม่ได้ใช้ model จากผู้สอน
+                    provisional model: Starter Kit not found ยังไม่ได้ใช้ model จากผู้สอน
                     ค่าที่เห็นจึงเป็นผลของ generic NPN model (BF จากฟอร์ม, IS=1e-15, VAF=100)
                 </p>
                 {% endif %}
@@ -1114,26 +1250,36 @@
 
                 {% if spice.analysis == 'ac' %}
                 <div class="plot-grid" id="spice-ac-plot">
-                    <div class="plot-frame">
-                        <h4>Gain magnitude (dB)</h4>
+                    <div class="plot-frame" role="group" aria-label="Gain magnitude plot; series: Gain">
+                        <h3>Gain magnitude (dB)</h3>
+                        <div class="plot-legend-html">
+                            <span><i class="legend-swatch" style="--legend-color:#0c8e83"></i>Gain</span>
+                        </div>
                         {{ spice.plots.magnitude|safe if spice.plots and spice.plots.magnitude else '<p class="plot-empty">ไม่มีข้อมูล</p>'|safe }}
                     </div>
-                    <div class="plot-frame">
-                        <h4>Phase (degrees)</h4>
+                    <div class="plot-frame" role="group" aria-label="Phase plot; series: Phase">
+                        <h3>Phase (degrees)</h3>
+                        <div class="plot-legend-html">
+                            <span><i class="legend-swatch" style="--legend-color:#c77a35"></i>Phase</span>
+                        </div>
                         {{ spice.plots.phase|safe if spice.plots and spice.plots.phase else '<p class="plot-empty">ไม่มีข้อมูล</p>'|safe }}
                     </div>
                 </div>
                 {% if spice.ac %}
                 <p class="validation-note">
-                    ความถี่ที่สแกน: {{ spice.ac|length }} จุด — อ่านค่า gain/phase ได้จากกราฟด้านบน
+                    ความถี่ที่สแกน: {{ spice.ac|length }} จุด: อ่านค่า gain/phase ได้จากกราฟด้านบน
                 </p>
                 {% endif %}
                 {% endif %}
 
                 {% if spice.analysis == 'tran' %}
                 <div class="plot-grid" id="spice-tran-plot">
-                    <div class="plot-frame">
-                        <h4>Input vs Output (V vs ms)</h4>
+                    <div class="plot-frame" role="group" aria-label="Input versus output waveform plot; series: Vin and Vout">
+                        <h3>Input vs Output (V vs ms)</h3>
+                        <div class="plot-legend-html">
+                            <span><i class="legend-swatch" style="--legend-color:#8a94a6"></i>Vin</span>
+                            <span><i class="legend-swatch" style="--legend-color:#c77a35"></i>Vout</span>
+                        </div>
                         {{ spice.plots.waveform|safe if spice.plots and spice.plots.waveform else '<p class="plot-empty">ไม่มีข้อมูล</p>'|safe }}
                     </div>
                 </div>
@@ -1152,12 +1298,12 @@
                 </div>
 
                 {% else %}
-                <div class="badge-status badge-neutral" id="spice-status-card">
+                <div class="badge-status badge-neutral" id="spice-status-card" role="status" aria-live="polite" tabindex="-1">
                     <div class="badge-title">
                         <i class="fa-solid fa-circle-info"></i>
                         <span>Not run</span>
                     </div>
-                    <div class="badge-body">เลือก Analysis Mode แล้วกดปุ่มจำลอง — รองรับเฉพาะ Voltage Divider Bias</div>
+                    <div class="badge-body">เลือก Analysis Mode แล้วกดปุ่มจำลอง: รองรับเฉพาะ Voltage Divider Bias</div>
                 </div>
                 {% endif %}
             </div>
@@ -1227,7 +1373,7 @@
                                 <td><strong>A5 · อินพุตผิด</strong></td>
                                 <td>Fixed · <var>R</var><sub>B</sub> = 0</td>
                                 <td>มีข้อความให้แก้ <var>R</var><sub>B</sub> (ต้องมากกว่า 0) เว็บไม่ล่ม และไม่แสดงผลเดิมเป็นผลของรอบนี้ (และมีการตรวจอินพุตใน Flask ด้วย)</td>
-                                <td><strong>HTTP 400</strong> · badge แดง "Calculation Error — Fixed Bias"<br>ข้อความ "RB ต้องมากกว่า 0" · ตารางผลเป็น — ทั้ง 7 ช่อง</td>
+                                <td><strong>HTTP 400</strong> · badge แดง "Calculation Error: Fixed Bias"<br>ข้อความ "RB ต้องมากกว่า 0" · ตารางผลแสดง "ไม่มีค่า" ทั้ง 7 ช่อง</td>
                                 <td>OpenCode Browser: เปิด <code>?mode=fixed</code> ใส่ <var>R</var><sub>B</sub> = 0 → Calculate → ตรวจ badge, ตาราง และ HTTP status</td>
                                 <td class="status-pass">PASS</td>
                             </tr>
@@ -1235,7 +1381,7 @@
                     </table>
                 </div>
 
-                <p class="validation-footnote">หมายเหตุ: รันผ่าน OpenCode Browser tool (Chrome จริง) — Playwright MCP ยังไม่ติดตั้งในเครื่องนี้; ค่าคาดหมายอ้างอิงจากตารางใบงานเท่านั้น</p>
+                <p class="validation-footnote">หมายเหตุ: รันผ่าน OpenCode Browser tool (Chrome จริง); Playwright MCP ยังไม่ติดตั้งในเครื่องนี้; ค่าคาดหมายอ้างอิงจากตารางใบงานเท่านั้น</p>
             </div>
         </section>
 
@@ -1249,5 +1395,52 @@
             </div>
         </footer>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('bias-form');
+            const loading = document.getElementById('sim-loading');
+
+            if (form && loading) {
+                const loadingText = loading.querySelector('[data-loading-text]');
+                form.addEventListener('submit', function (event) {
+                    const isSimulation = event.submitter &&
+                        event.submitter.classList.contains('btn-simulate');
+                    if (loadingText) {
+                        loadingText.textContent = isSimulation
+                            ? 'กำลังรัน ngspice กรุณารอสักครู่...'
+                            : 'กำลังคำนวณ DC Bias...';
+                    }
+                    loading.hidden = false;
+                });
+
+                {% if mode == 'divider' %}
+                const analysisInputs = form.querySelectorAll('input[name="analysis"]');
+                const acInputs = form.querySelectorAll(
+                    'input[name="ac_start_hz"], input[name="ac_stop_hz"], input[name="ac_ppd"]'
+                );
+                const tranInputs = form.querySelectorAll(
+                    'input[name="tran_stop_ms"], input[name="tran_step_us"]'
+                );
+                const syncRequired = function () {
+                    const checked = form.querySelector('input[name="analysis"]:checked');
+                    const analysis = checked ? checked.value : 'dc';
+                    acInputs.forEach(function (input) { input.required = analysis === 'ac'; });
+                    tranInputs.forEach(function (input) { input.required = analysis === 'tran'; });
+                };
+                analysisInputs.forEach(function (input) {
+                    input.addEventListener('change', syncRequired);
+                });
+                syncRequired();
+                {% endif %}
+            }
+
+            const errorCard = document.querySelector('[data-error-focus]:not([hidden])');
+            if (errorCard) {
+                errorCard.focus({ preventScroll: true });
+                errorCard.scrollIntoView({ block: 'center' });
+            }
+        });
+    </script>
 </body>
 </html>

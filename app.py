@@ -9,6 +9,7 @@ from dc_bias import (
 )
 from spice_engine import SpiceError, SpiceRequest, run_ngspice
 from spice_plots import line_chart
+from spice_summary import build_summary
 
 app = Flask(__name__)
 
@@ -86,6 +87,17 @@ def parse_and_solve(mode, data):
 
 ANALYSES = ("dc", "ac", "tran")
 
+# Values for fields the selected analysis never sends to the netlist. They
+# match the defaults already shown in the form, so a DC run needs no AC sweep
+# or transient timing values.
+_UNUSED_SPICE_DEFAULTS = {
+    "ac_start_Hz": 10.0,
+    "ac_stop_Hz": 1_000_000.0,
+    "ac_ppd": 10,
+    "tran_stop_s": 0.005,
+    "tran_step_s": 0.00001,
+}
+
 
 def parse_spice_request(data):
     """Validate the SPICE-only fields and convert form units to SI."""
@@ -101,18 +113,27 @@ def parse_spice_request(data):
     if vin_freq_Hz <= 0:
         raise ValidationError("Source frequency ต้องมากกว่า 0")
 
-    ac_start_Hz = _number(data, "ac_start_hz", "AC start")
-    ac_stop_Hz = _number(data, "ac_stop_hz", "AC stop")
-    if ac_start_Hz <= 0 or ac_stop_Hz <= ac_start_Hz:
-        raise ValidationError("AC start ต้องมากกว่า 0 และน้อยกว่า AC stop")
-    raw_ppd = _number(data, "ac_ppd", "AC points/decade")
-    if raw_ppd != int(raw_ppd) or not 1 <= int(raw_ppd) <= 100:
-        raise ValidationError("AC points/decade ต้องเป็นจำนวนเต็ม 1–100")
+    if analysis == "ac":
+        ac_start_Hz = _number(data, "ac_start_hz", "AC start")
+        ac_stop_Hz = _number(data, "ac_stop_hz", "AC stop")
+        if ac_start_Hz <= 0 or ac_stop_Hz <= ac_start_Hz:
+            raise ValidationError("AC start ต้องมากกว่า 0 และน้อยกว่า AC stop")
+        raw_ppd = _number(data, "ac_ppd", "AC points/decade")
+        if raw_ppd != int(raw_ppd) or not 1 <= int(raw_ppd) <= 100:
+            raise ValidationError("AC points/decade ต้องเป็นจำนวนเต็ม 1–100")
+    else:
+        ac_start_Hz = _UNUSED_SPICE_DEFAULTS["ac_start_Hz"]
+        ac_stop_Hz = _UNUSED_SPICE_DEFAULTS["ac_stop_Hz"]
+        raw_ppd = _UNUSED_SPICE_DEFAULTS["ac_ppd"]
 
-    tran_stop_s = _number(data, "tran_stop_ms", "Transient stop", scale=1e-3)
-    tran_step_s = _number(data, "tran_step_us", "Transient max step", scale=1e-6)
-    if tran_stop_s <= 0 or tran_step_s <= 0 or tran_step_s >= tran_stop_s:
-        raise ValidationError("Max step ต้องมากกว่า 0 และน้อยกว่า Transient stop")
+    if analysis == "tran":
+        tran_stop_s = _number(data, "tran_stop_ms", "Transient stop", scale=1e-3)
+        tran_step_s = _number(data, "tran_step_us", "Transient max step", scale=1e-6)
+        if tran_stop_s <= 0 or tran_step_s <= 0 or tran_step_s >= tran_stop_s:
+            raise ValidationError("Max step ต้องมากกว่า 0 และน้อยกว่า Transient stop")
+    else:
+        tran_stop_s = _UNUSED_SPICE_DEFAULTS["tran_stop_s"]
+        tran_step_s = _UNUSED_SPICE_DEFAULTS["tran_step_s"]
 
     rl_ohm = _number(data, "rl_kohm", "Load resistor", scale=1_000.0)
     if rl_ohm <= 0:
@@ -186,6 +207,7 @@ def _attach_plots(spice):
 def _render(
     mode, values, result=None, error=None, status_code=200,
     spice=None, spice_error=None, spice_analysis="dc", spice_values=None,
+    source_freq_Hz=None,
 ):
     return (
         render_template(
@@ -200,6 +222,7 @@ def _render(
             spice_error=spice_error,
             spice_analysis=spice_analysis,
             spice_values=spice_values,
+            spice_summary=build_summary(spice, result, source_freq_Hz or 1000.0),
         ),
         status_code,
     )
@@ -281,6 +304,7 @@ def spice_form():
     return _render(
         mode, data, result=result, spice=spice,
         spice_analysis=spice_analysis, spice_values=data,
+        source_freq_Hz=spice_request.vin_freq_Hz,
     )
 
 
