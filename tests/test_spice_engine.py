@@ -11,6 +11,7 @@ from spice_engine import (
     SpiceError,
     SpiceRequest,
     build_netlist,
+    detect_engine_version,
     find_model,
     find_ngspice,
     parse_ac_csv,
@@ -118,6 +119,26 @@ class DiscoveryTests(unittest.TestCase):
         with patch.dict(os.environ, {"NGSPICE_BIN": "C:/fake/ngspice_con.exe"}, clear=False):
             self.assertEqual(find_ngspice(), "C:/fake/ngspice_con.exe")
 
+    @unittest.skipUnless(os.name == "nt", "Windows GUI fallback is platform-specific")
+    def test_windows_does_not_fall_back_to_gui_binary(self):
+        with patch.dict(os.environ, {}, clear=True):
+            with patch("spice_engine.shutil.which", side_effect=lambda name: "C:/fake/ngspice.exe" if name == "ngspice" else None):
+                with self.assertRaises(SpiceError) as ctx:
+                    find_ngspice()
+        self.assertEqual(ctx.exception.kind, "not_found")
+        self.assertIn("ngspice_con", ctx.exception.message)
+
+    def test_detect_engine_version_from_v_flag(self):
+        fake = subprocess.CompletedProcess(
+            ["ngspice", "-v"], 0,
+            "******\n** ngspice-47 : Circuit level simulation program\n", "",
+        )
+        with patch("spice_engine.subprocess.run", return_value=fake) as run:
+            version = detect_engine_version("", ngspice="C:/fake/ngspice_con.exe", run_dir=Path("."))
+        self.assertEqual(version, "ngspice-47")
+        self.assertEqual(run.call_args.args[0][1], "-v")
+        self.assertFalse(run.call_args.kwargs.get("shell", False))
+
 
 class ParserTests(unittest.TestCase):
     def write(self, text):
@@ -197,3 +218,29 @@ class RunTests(unittest.TestCase):
                     with self.assertRaises(SpiceError) as ctx:
                         run_ngspice(request("dc"), runs_root=Path(tmp))
             self.assertEqual(ctx.exception.kind, "process_error")
+
+    def test_missing_output_is_an_error_with_run_id(self):
+        fake = subprocess.CompletedProcess(["ngspice"], 0, "", "")
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.dict(os.environ, {"NGSPICE_BIN": "C:/fake/ngspice_con.exe"}):
+                with patch("spice_engine.subprocess.run", return_value=fake):
+                    with self.assertRaises(SpiceError) as ctx:
+                        run_ngspice(request("dc"), runs_root=Path(tmp))
+            err = ctx.exception
+            self.assertEqual(err.kind, "missing_output")
+            self.assertIsNotNone(err.run_id)
+            meta = Path(tmp) / err.run_id / "meta.json"
+            self.assertTrue(meta.exists())
+            self.assertEqual(json.loads(meta.read_text(encoding="utf-8"))["kind"], "missing_output")
+
+    def test_exit_zero_with_fatal_log_is_not_success(self):
+        fake = subprocess.CompletedProcess(["ngspice"], 0, "Error: timestep too small\n", "")
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.dict(os.environ, {"NGSPICE_BIN": "C:/fake/ngspice_con.exe"}):
+                with patch("spice_engine.subprocess.run", return_value=fake):
+                    with self.assertRaises(SpiceError) as ctx:
+                        run_ngspice(request("dc"), runs_root=Path(tmp))
+            err = ctx.exception
+            self.assertEqual(err.kind, "process_error")
+            self.assertIsNotNone(err.run_id)
+            self.assertNotIn("Success", (Path(tmp) / err.run_id / "meta.json").read_text(encoding="utf-8"))

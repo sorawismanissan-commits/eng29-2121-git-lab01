@@ -1054,7 +1054,7 @@
                 </div>
                 <ul class="spice-meta">
                     <li>Engine: <strong>{{ spice.engine }}</strong></li>
-                    <li>Version: <strong>{{ spice.engine_version or 'ngspice-47' }}</strong></li>
+                    <li>Version: <strong>{{ spice.engine_version or 'unknown' }}</strong></li>
                     <li>run_id: <code id="spice-run-id">{{ spice.run_id }}</code></li>
                     <li>Duration: <strong>{{ spice.duration_ms }} ms</strong></li>
                     <li>Analysis: <strong>{{ spice.analysis }}</strong></li>
@@ -1147,7 +1147,7 @@
                     </details>
                     <details>
                         <summary>Engine log / warnings</summary>
-                        <pre>{{ spice.warnings|join('\n') if spice.warnings else '(no warnings)' }}</pre>
+                        <pre>{{ spice.get('log') or (spice.warnings|join('\n') if spice.warnings else '(no log captured)') }}</pre>
                     </details>
                 </div>
 

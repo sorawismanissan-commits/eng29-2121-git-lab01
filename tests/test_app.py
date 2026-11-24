@@ -384,6 +384,16 @@ class SpiceTemplateTests(unittest.TestCase):
         self.assertIn('class="sim-plot"', body)
         self.assertIn("Time (ms)", body)
 
+    def test_engine_log_and_unknown_version_are_shown(self):
+        result = {**FAKE_DC, "engine_version": None, "log": "STDOUT:\nNote: No compatibility mode selected!\n"}
+        with patch("app.run_ngspice", return_value=result):
+            res = self.client.post("/spice", data=SPICE_FORM)
+        body = res.get_data(as_text=True)
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("Version: <strong>unknown</strong>", body)
+        self.assertIn("Note: No compatibility mode selected!", body)
+        self.assertNotIn("Version: <strong>ngspice-47</strong>", body)
+
     def test_engine_error_hides_stale_plots(self):
         error = SpiceError("not_found", "ไม่พบ ngspice", run_id="run-stale", artifacts={})
         with patch("app.run_ngspice", side_effect=error):

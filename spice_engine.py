@@ -12,6 +12,7 @@ import json
 import math
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import time
@@ -58,7 +59,10 @@ def find_ngspice():
     env = os.environ.get("NGSPICE_BIN")
     if env:
         return env
-    for name in ("ngspice_con", "ngspice_con.exe", "ngspice"):
+    candidates = ["ngspice_con", "ngspice_con.exe"]
+    if os.name != "nt":
+        candidates.append("ngspice")
+    for name in candidates:
         found = shutil.which(name)
         if found:
             return found
@@ -66,6 +70,36 @@ def find_ngspice():
         "not_found",
         "ไม่พบ ngspice_con ใน PATH หรือตัวแปร NGSPICE_BIN — ต้องใช้ ngspice_con.exe (ไม่ใช่ ngspice.exe แบบ GUI)",
     )
+
+
+_VERSION_RE = re.compile(r"ngspice[- ]?(\d+(?:\.\d+)*)", re.IGNORECASE)
+
+
+def detect_engine_version(log, ngspice=None, run_dir=None, timeout=15.0):
+    """Read the solver version from its banner, falling back to ``-v``.
+
+    Returns ``None`` when no version can be measured; callers must not
+    substitute a hard-coded version into provenance output.
+    """
+    match = _VERSION_RE.search(log or "")
+    if match:
+        return f"ngspice-{match.group(1)}"
+    if not ngspice:
+        return None
+    try:
+        completed = subprocess.run(
+            [ngspice, "-v"],
+            cwd=run_dir,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    match = _VERSION_RE.search(f"{completed.stdout}\n{completed.stderr}")
+    return f"ngspice-{match.group(1)}" if match else None
 
 
 def find_model(beta):
@@ -204,7 +238,15 @@ def build_netlist(request):
 
 
 _OUTPUT_FILES = {"dc": "op.csv", "ac": "ac.csv", "tran": "tran.csv"}
-_FATAL_PATTERNS = ("fatal error", "singular matrix", "no such file", "can't open", "cannot open")
+_FATAL_PATTERNS = (
+    re.compile(r"(?im)^\s*(?:fatal\s+)?error\b"),
+    re.compile(r"(?i)\bsingular matrix\b"),
+    re.compile(r"(?i)\btimestep too small\b"),
+    re.compile(r"(?i)\bno such vector\b"),
+    re.compile(r"(?i)\bno such file\b"),
+    re.compile(r"(?i)\bcan(?:'|’)t open\b"),
+    re.compile(r"(?i)\bcannot open\b"),
+)
 
 
 def run_ngspice(request, timeout=15.0, runs_root=None):
@@ -283,11 +325,13 @@ def run_ngspice(request, timeout=15.0, runs_root=None):
                 "process_error",
                 f"ngspice ออกด้วยโค้ด {completed.returncode}: {completed.stderr.strip() or completed.stdout.strip()}",
             )
-        lowered = log.lower()
         for pattern in _FATAL_PATTERNS:
-            if pattern in lowered:
-                raise SpiceError("process_error", f"ngspice รายงานความผิดพลาดร้ายแรง ({pattern})")
+            if pattern.search(log):
+                raise SpiceError("process_error", f"ngspice รายงานความผิดพลาดร้ายแรง ({pattern.pattern})")
 
+        engine_version = detect_engine_version(
+            log, ngspice=ngspice, run_dir=run_dir, timeout=timeout
+        )
         output_name = _OUTPUT_FILES[request.analysis]
         output_path = run_dir / output_name
         if not output_path.is_file():
@@ -301,7 +345,7 @@ def run_ngspice(request, timeout=15.0, runs_root=None):
         payload = parsers[request.analysis]()
         result = {
             "engine": "ngspice",
-            "engine_version": None,
+            "engine_version": engine_version,
             "status": "Success",
             "analysis": request.analysis,
             "run_id": run_id,
@@ -310,6 +354,7 @@ def run_ngspice(request, timeout=15.0, runs_root=None):
             "model_source": model_source,
             "netlist": netlist,
             "warnings": [],
+            "log": log,
             "artifacts": artifacts,
         }
         result.update(payload)
